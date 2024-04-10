@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    image: backtest-importer
+    ports: 
+      - 8888:8888
+    volumes:
+      - .:/home/node/app
+  database:
+    container_name: backtest-pg
+    image: postgres
+    volumes:
+      - ./db-backup:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRES_USER=DoCkEr!!  # Substitua por seu nome de usuário
+      - POSTGRES_PASSWORD=BaCkTeSt!!  # Substitua por sua senha
+      - POSTGRES_DB=backtest  # Substitua pelo nome do seu banco de dados
+
+networks:
+  backtest-net:
+    driver: bridge
