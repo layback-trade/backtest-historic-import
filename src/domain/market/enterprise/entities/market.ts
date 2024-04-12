@@ -2,8 +2,8 @@ import { isBefore } from 'date-fns'
 import { Entity } from '../../../../core/entity'
 import { Odd } from './value-objects/odd'
 
-type MarketStatus = 'OPEN' | 'SUSPENDED' | 'CLOSED' // precisa ter o closed mesmo?
-type MarketType =
+export type MarketStatus = 'OPEN' | 'SUSPENDED' | 'CLOSED' // precisa ter o closed mesmo?
+export type MarketType =
   | 'MATCH_ODDS'
   | 'CORRECT_SCORE'
   | 'BOTH_TEAMS_TO_SCORE'
@@ -100,14 +100,30 @@ export class Market extends Entity<MarketProps> {
   }
 
   suspend() {
+    // if (isBefore(time, this.props.createdAt)) {
+    //   throw new Error('Invalid suspending time')
+    // }
+    if (this.props.status === 'CLOSED') {
+      throw new Error('Market already closed')
+    }
     this.props.status = 'SUSPENDED'
+  }
+
+  reopen() {
+    // if (isBefore(time, this.props.createdAt)) {
+    //   throw new Error('Invalid reopening time')
+    // }
+    if (this.props.status !== 'SUSPENDED') {
+      throw new Error('Market cannot be opened if not suspended')
+    }
+    this.props.status = 'OPEN'
   }
 
   close(time: Date) {
     if (isBefore(time, this.props.createdAt)) {
-      throw new Error('Invalid close time')
+      throw new Error('Invalid closing time')
     }
-    // if closed && !this.props.inPlayAt => No ODD
+
     this.props.closedAt = time
     this.props.status = 'CLOSED'
   }

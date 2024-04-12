@@ -10,7 +10,7 @@ interface EventProps {
 
 export class Event extends Entity<EventProps> {
   constructor(props: Omit<EventProps, 'markets'>, id: string) {
-    if (!props.name.match(/^([A-Za-z0-9\s()]+) v ([A-Za-z0-9\s()]+)$/)) {
+    if (!props.name.match(/^(.+) v (.+)$/)) {
       throw new Error('Invalid event name')
     }
     if (isBefore(props.scheduledStartDate, '2020-01-01')) {
@@ -43,5 +43,9 @@ export class Event extends Entity<EventProps> {
     }
 
     return market
+  }
+
+  get markets(): Map<string, Market> {
+    return this.props.markets
   }
 }
