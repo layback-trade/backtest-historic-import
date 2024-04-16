@@ -7,6 +7,10 @@ interface CompetitionProps {
 }
 
 export class Competition extends Entity<CompetitionProps> {
+  constructor(props: CompetitionProps, id: string) {
+    super(props, id)
+  }
+
   get name(): string {
     return this.props.name
   }

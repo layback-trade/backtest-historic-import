@@ -1,8 +1,8 @@
-import { isBefore } from 'date-fns'
+import { isBefore, isFuture } from 'date-fns'
 import { Entity } from '../../../core/entity'
 import { Statistic, StatisticType } from './value-objects/statistic'
 
-interface GameProps {
+interface MatchProps {
   // HTScore: Score
   // endScore: Score
   homeTeamId: string
@@ -16,10 +16,10 @@ interface GameProps {
   // períodos?
 }
 
-export class Game extends Entity<GameProps> {
+export class Match extends Entity<MatchProps> {
   constructor(
     props: Omit<
-      GameProps,
+      MatchProps,
       | 'endDate'
       | 'statistics'
       | 'firstHalfEnd'
@@ -28,6 +28,9 @@ export class Game extends Entity<GameProps> {
     >,
     id: string,
   ) {
+    if (isFuture(props.firstHalfStart)) {
+      throw new Error('Match cannot start in the future')
+    }
     super({ ...props, statistics: [] }, id)
   }
 
@@ -47,6 +50,22 @@ export class Game extends Entity<GameProps> {
     return this.props.secondHalfEnd
   }
 
+  get statistics() {
+    return this.props.statistics
+  }
+
+  get homeTeamId() {
+    return this.props.homeTeamId
+  }
+
+  get awayTeamId() {
+    return this.props.awayTeamId
+  }
+
+  get competitionId() {
+    return this.props.competitionId
+  }
+
   endFirstHalf(time: Date) {
     if (isBefore(time, this.props.firstHalfStart)) {
       throw new Error('First half end must not be earlier than the start')
@@ -64,11 +83,11 @@ export class Game extends Entity<GameProps> {
     if (!this.props.firstHalfEnd) {
       throw new Error('First half not ended yet')
     }
-    if (isBefore(time, this.props.firstHalfEnd)) {
-      throw new Error(
-        'Second half start must not be later than the first half ending',
-      )
-    }
+    // if (isBefore(time, this.props.firstHalfEnd)) {
+    //   throw new Error(
+    //     'Second half start must not be later than the first half ending',
+    //   )
+    // }
     this.props.secondHalfStart = time
   }
 

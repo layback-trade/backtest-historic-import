@@ -14,14 +14,14 @@ import { marketResourcesHandler } from './queue/workerHandlers/market-resources-
 // startPrisma()
 // setupSentry()
 
-export const gameResourcesQueueName = env.GAME_RESOURCES_QUEUE
+export const matchResourcesQueueName = env.MATCH_RESOURCES_QUEUE
 export const marketResourcesQueueName = env.MARKET_RESOURCES_QUEUE
 export const dataUnificationQueueName = env.DATA_UNIFICATION_QUEUE
 export const dataSavingQueueName = env.DATA_SAVING_QUEUE
 
 const queues = [
   // {
-  //   name: gameResourcesQueueName,
+  //   name: matchResourcesQueueName,
   //   worker: {
   //     handler: () => {},
   //     quantity: 1,

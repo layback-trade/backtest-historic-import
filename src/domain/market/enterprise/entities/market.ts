@@ -1,4 +1,4 @@
-import { isBefore } from 'date-fns'
+import { addMinutes, isBefore } from 'date-fns'
 import { Entity } from '../../../../core/entity'
 import { Odd } from './value-objects/odd'
 
@@ -122,6 +122,39 @@ export class Market extends Entity<MarketProps> {
   close(time: Date) {
     if (isBefore(time, this.props.createdAt)) {
       throw new Error('Invalid closing time')
+    }
+
+    if (this.props.odds.length === 0) {
+      throw new Error('Market cannot be closed without odds')
+    }
+
+    if (this.props.status === 'CLOSED') {
+      throw new Error('Market already closed')
+    }
+
+    if (!this.props.inPlayDate) {
+      throw new Error('Market cannot be closed without inPlay')
+    }
+
+    if (
+      this.props.type === 'HALF_TIME' &&
+      addMinutes(this.props.inPlayDate, 44) > time
+    ) {
+      throw new Error('Market cannot be closed before 45 minutes')
+    }
+
+    if (
+      this.props.type === 'MATCH_ODDS' &&
+      addMinutes(this.props.inPlayDate, 90) > time
+    ) {
+      throw new Error('Market cannot be closed before 90 minutes')
+    }
+
+    if (
+      this.props.type === 'CORRECT_SCORE' &&
+      addMinutes(this.props.inPlayDate, 90) > time
+    ) {
+      throw new Error('Market cannot be closed before 90 minutes')
     }
 
     this.props.closedAt = time

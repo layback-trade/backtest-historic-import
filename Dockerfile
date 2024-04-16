@@ -1,12 +1,23 @@
-FROM node:20-alpine
+FROM node:alpine AS builder
 
-WORKDIR /home/node/app
+WORKDIR /home/app
 
 COPY package*.json .
 
-RUN npm i && \
-    npm i tsx -g
+RUN npm i
 
 COPY . .
 
-CMD ["npm", "run", "dev"]
+RUN npm run build
+
+FROM node:alpine
+
+WORKDIR /home/app
+
+COPY package*.json .
+
+RUN npm ci --only=production
+
+COPY --from=builder /home/app/build ./build
+
+CMD npm start

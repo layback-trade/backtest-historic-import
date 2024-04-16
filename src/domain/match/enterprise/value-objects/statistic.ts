@@ -1,6 +1,6 @@
 import { isBefore, isFuture } from 'date-fns'
 
-type TeamSide = 'home' | 'away'
+export type TeamSide = 'home' | 'away'
 
 export type StatisticType =
   | 'GOALS'

@@ -5,28 +5,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: builder
-    image: backtest-importer-dev
+    image: backtest-importer-prod
     tty: true
-    ports: 
-      - 8888:8888
-    volumes:
-      - .:/home/app
-      - /app/node_modules
-    command: npm run dev
-    depends_on:
-      - database
-      - queue-cache
-    environment:
-      - REDIS_URL=rediss://backtest-queue-redis:6379
-      - DATABASE_URL=postgresql://DoCkEr!!:BaCkTeSt!!@backtest-pg:5432/backtest
-      - MATCH_RESOURCES_QUEUE=match_resources
-      - MARKET_RESOURCES_QUEUE=markets_resources
-      - DATA_UNIFICATION_QUEUE=data_unificiation
-      - DATA_SAVING_QUEUE=data_saving
-      - BETSAPI_TOKEN=94644-aVgFz4CwkgNN1R
-    networks:
-      - backtest-net
+    # ports: 
+    #   - 8888:8888
   database:
     container_name: backtest-pg
     image: postgres
