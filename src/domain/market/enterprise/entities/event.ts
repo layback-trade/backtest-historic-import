@@ -17,7 +17,7 @@ export class Event extends Entity<EventProps> {
     if (isBefore(props.scheduledStartDate, '2020-01-01')) {
       throw new Error('Start date too old')
     }
-    super({ ...props, markets: new Map() }, id)
+    super({ markets: new Map(), ...props }, id)
   }
 
   get name(): string {

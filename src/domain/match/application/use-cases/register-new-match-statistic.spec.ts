@@ -1,13 +1,13 @@
 import { InMemoryMatchesRepository } from '@/infra/cache/repositories/in-memory-matches-repository'
-import { RegisterMatchNewStatisticUseCase } from './register-match-new-statistic'
+import { RegisterNewMatchStatisticUseCase } from './register-new-match-statistic'
 
-let sut: RegisterMatchNewStatisticUseCase
+let sut: RegisterNewMatchStatisticUseCase
 let inMemoryMatchRepository: InMemoryMatchesRepository
 
 describe('Register match new statistic', () => {
   beforeEach(() => {
     inMemoryMatchRepository = new InMemoryMatchesRepository()
-    sut = new RegisterMatchNewStatisticUseCase(inMemoryMatchRepository)
+    sut = new RegisterNewMatchStatisticUseCase(inMemoryMatchRepository)
   })
 
   it('should be able to register a new statistic for a match', async () => {
@@ -116,7 +116,7 @@ describe('Register match new statistic', () => {
     )
   })
 
-  it('should not be able to register a statistic if the statistic is registered after the match ends', async () => {
+  it('should not be able to register a statistic if the statistic is registered after the second half end', async () => {
     inMemoryMatchRepository.matches.set('1', {
       awayTeamId: '1',
       competitionId: '1',
@@ -131,12 +131,14 @@ describe('Register match new statistic', () => {
     await expect(
       sut.execute({
         matchId: '1',
-        timestamp: new Date('2022-01-01T02:00:00Z'), // After the match ends
+        timestamp: new Date('2022-01-01T02:00:00Z'), // After the second half end
         teamSide: 'home',
         type: 'GOALS',
         value: 1,
       }),
-    ).rejects.toThrow('Statistic cannot be registered after the match ends')
+    ).rejects.toThrow(
+      'Statistic cannot be registered after the second half end',
+    )
   })
 
   it('should not be able to register a statistic if a statistic of the same type and team side is registered with less than 1 minute difference', async () => {

@@ -1,3 +1,4 @@
+import { odds } from '@/infra/queue/workerHandlers/helpers/calculateOddGap'
 import { isBefore, isFuture } from 'date-fns'
 
 interface OddProps {
@@ -12,12 +13,12 @@ export class Odd {
   public readonly selection: string
 
   constructor({ value, timestamp, selection }: OddProps) {
-    if (value > 1000 || value < 1.01) {
-      throw new Error('Odd with invalid value')
+    if (!odds.includes(value)) {
+      throw new Error('Invalid odd value')
     }
 
     if (isFuture(timestamp) || isBefore(timestamp, '2020-01-01')) {
-      throw new Error('Odd timestamp invalid')
+      throw new Error('Invalid odd timestamp')
     }
 
     this.value = value

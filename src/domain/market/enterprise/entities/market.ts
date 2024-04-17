@@ -34,7 +34,7 @@ export class Market extends Entity<MarketProps> {
     props: Optional<MarketProps, 'odds' | 'inPlayDate' | 'closedAt' | 'status'>,
     id: string,
   ) {
-    super({ ...props, odds: [], status: 'OPEN' }, id)
+    super({ odds: [], status: 'OPEN', ...props }, id)
   }
 
   get type() {
@@ -70,7 +70,7 @@ export class Market extends Entity<MarketProps> {
       throw new Error('Market already closed')
     }
     if (!this.props.selections.includes(odd.selection)) {
-      throw new Error('Selection not belongs this market')
+      throw new Error('Selection not belongs to this market')
     }
     if (isBefore(odd.timestamp, this.props.createdAt)) {
       throw new Error('Invalid odd time')
@@ -104,8 +104,8 @@ export class Market extends Entity<MarketProps> {
     // if (isBefore(time, this.props.createdAt)) {
     //   throw new Error('Invalid suspending time')
     // }
-    if (this.props.status === 'CLOSED') {
-      throw new Error('Market already closed')
+    if (this.props.status !== 'OPEN') {
+      throw new Error('Market cannot be suspended if not open')
     }
     this.props.status = 'SUSPENDED'
   }
@@ -121,10 +121,6 @@ export class Market extends Entity<MarketProps> {
   }
 
   close(time: Date) {
-    if (isBefore(time, this.props.createdAt)) {
-      throw new Error('Invalid closing time')
-    }
-
     if (this.props.odds.length === 0) {
       throw new Error('Market cannot be closed without odds')
     }
@@ -133,8 +129,8 @@ export class Market extends Entity<MarketProps> {
       throw new Error('Market already closed')
     }
 
-    if (!this.props.inPlayDate) {
-      throw new Error('Market cannot be closed without inPlay')
+    if (!this.props.inPlayDate || isBefore(time, this.props.inPlayDate)) {
+      throw new Error('Market cannot be closed before inPlay')
     }
 
     if (

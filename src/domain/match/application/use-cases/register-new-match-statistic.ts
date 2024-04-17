@@ -5,7 +5,7 @@ import {
 } from '../../enterprise/value-objects/statistic'
 import { MatchesRepository } from '../repositories/matches-repository'
 
-interface RegisterMatchNewStatisticUseCaseProps {
+interface RegisterNewMatchStatisticUseCaseProps {
   matchId: string
   timestamp: Date
   teamSide: TeamSide
@@ -13,7 +13,7 @@ interface RegisterMatchNewStatisticUseCaseProps {
   value: number
 }
 
-export class RegisterMatchNewStatisticUseCase {
+export class RegisterNewMatchStatisticUseCase {
   constructor(private matchesRepository: MatchesRepository) {}
 
   async execute({
@@ -22,7 +22,7 @@ export class RegisterMatchNewStatisticUseCase {
     teamSide,
     type,
     value,
-  }: RegisterMatchNewStatisticUseCaseProps): Promise<void> {
+  }: RegisterNewMatchStatisticUseCaseProps): Promise<void> {
     const match = await this.matchesRepository.findById(matchId)
 
     if (!match) {

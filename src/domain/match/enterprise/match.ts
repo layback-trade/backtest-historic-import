@@ -192,7 +192,9 @@ export class Match extends Entity<MatchProps> {
         }
         break
       case 'ENDED':
-        throw new Error('Statistic cannot be registered after the match ends')
+        throw new Error(
+          'Statistic cannot be registered after the second half end',
+        )
     }
 
     if (

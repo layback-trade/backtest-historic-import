@@ -13,7 +13,7 @@ export class CloseMarketUseCase {
     const event = await this.eventsRepository.findById(eventId)
 
     if (!event) {
-      throw new Error('Market does not exist!')
+      throw new Error('Event does not exist!')
     }
 
     const market = event.getMarketById(marketId)

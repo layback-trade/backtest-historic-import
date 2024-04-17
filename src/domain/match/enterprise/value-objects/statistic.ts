@@ -31,7 +31,7 @@ export class Statistic {
 
   constructor({ teamSide, timestamp, type, value }: StatisticProps) {
     if (isFuture(timestamp) || isBefore(timestamp, '2020-01-01')) {
-      throw new Error('Odd timestamp invalid')
+      throw new Error('Invalid statistic timestamp')
     }
 
     const isValueInteger = value % 1 === 0

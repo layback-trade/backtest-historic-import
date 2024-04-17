@@ -5,7 +5,7 @@ let sut: AddEventMarketUseCase
 let inMemoryEventRepository: InMemoryEventsRepository
 
 describe('Add market for event', async () => {
-  beforeAll(() => {
+  beforeEach(() => {
     inMemoryEventRepository = new InMemoryEventsRepository()
     sut = new AddEventMarketUseCase(inMemoryEventRepository)
   })

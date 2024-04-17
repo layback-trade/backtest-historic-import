@@ -5,7 +5,11 @@ import {
 
 export interface MatchVendorResponse {
   id: string
-  name: string
+  vendorMatchId: string
+  firstHalfStart: Date
+  firstHalfEnd: Date
+  secondHalfStart: Date
+  secondHalfEnd?: Date
   homeTeam: {
     id: string
     name: string
@@ -24,7 +28,7 @@ export interface MatchVendorResponse {
   statistics: {
     teamSide: TeamSide
     type: StatisticType
-    value: string
+    value: number
     timestamp: Date
     staledAt: Date
     // matchTime: number // To think about
