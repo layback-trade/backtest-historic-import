@@ -1,3 +1,4 @@
+import { Optional } from '@/core/type-utils'
 import { addMinutes, isBefore } from 'date-fns'
 import { Entity } from '../../../../core/entity'
 import { Odd } from './value-objects/odd'
@@ -30,7 +31,7 @@ interface MarketProps {
 
 export class Market extends Entity<MarketProps> {
   constructor(
-    props: Omit<MarketProps, 'odds' | 'inPlayDate' | 'closedAt' | 'status'>,
+    props: Optional<MarketProps, 'odds' | 'inPlayDate' | 'closedAt' | 'status'>,
     id: string,
   ) {
     super({ ...props, odds: [], status: 'OPEN' }, id)

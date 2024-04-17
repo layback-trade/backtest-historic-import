@@ -16,15 +16,20 @@ export type StatisticType =
   | 'SHOT_ON_TARGET'
   | 'SHOT_OFF_TARGET'
 
+interface StatisticProps {
+  teamSide: TeamSide
+  type: StatisticType
+  timestamp: Date
+  value: number
+}
+
 export class Statistic {
   public readonly timestamp: Date
+  public readonly teamSide: TeamSide
+  public readonly type: StatisticType
+  public readonly value: number
 
-  constructor(
-    public readonly teamSide: TeamSide,
-    public readonly type: StatisticType,
-    timestamp: Date,
-    value: number,
-  ) {
+  constructor({ teamSide, timestamp, type, value }: StatisticProps) {
     if (isFuture(timestamp) || isBefore(timestamp, '2020-01-01')) {
       throw new Error('Odd timestamp invalid')
     }
@@ -40,5 +45,8 @@ export class Statistic {
     }
 
     this.timestamp = timestamp
+    this.value = value
+    this.teamSide = teamSide
+    this.type = type
   }
 }

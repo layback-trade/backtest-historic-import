@@ -1,3 +1,4 @@
+import { Optional } from '@/core/type-utils'
 import { isBefore } from 'date-fns'
 import { Entity } from '../../../../core/entity'
 import { Market } from './market'
@@ -9,7 +10,7 @@ interface EventProps {
 }
 
 export class Event extends Entity<EventProps> {
-  constructor(props: Omit<EventProps, 'markets'>, id: string) {
+  constructor(props: Optional<EventProps, 'markets'>, id: string) {
     if (!props.name.match(/^(.+) v (.+)$/)) {
       throw new Error('Invalid event name')
     }

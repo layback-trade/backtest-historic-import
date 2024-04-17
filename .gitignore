@@ -8,3 +8,6 @@ build
 
 # db
 db-backup
+
+# Testing
+coverage

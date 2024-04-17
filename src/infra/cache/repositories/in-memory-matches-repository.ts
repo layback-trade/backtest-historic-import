@@ -45,6 +45,14 @@ export class InMemoryMatchesRepository implements MatchesRepository {
   async findById(id: string) {
     const match = this.matches.get(id)
 
-    return match ? new Match(match, id) : null
+    return match
+      ? new Match(
+          {
+            ...match,
+            statistics: match.statistics.map((stat) => new Statistic(stat)),
+          },
+          id,
+        )
+      : null
   }
 }
