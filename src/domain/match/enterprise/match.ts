@@ -1,6 +1,8 @@
 import { Optional } from '@/core/type-utils'
 import { differenceInMinutes, isBefore, isFuture } from 'date-fns'
 import { Entity } from '../../../core/entity'
+import { IntervalTooShortError } from './errors/Interval-too-short-error'
+import { FirstHalfTooLongError } from './errors/first-half-too-long-error'
 import { Statistic, StatisticType } from './value-objects/statistic'
 
 interface MatchProps {
@@ -117,7 +119,7 @@ export class Match extends Entity<MatchProps> {
       throw new Error('First half must last at least 45 minutes')
     }
     if (differenceInMinutes(timestamp, this.props.firstHalfStart) > 60) {
-      // throw new Error('First half must not last more than 60 minutes')
+      throw new FirstHalfTooLongError()
     }
     this.props.firstHalfEnd = timestamp
   }
@@ -135,7 +137,7 @@ export class Match extends Entity<MatchProps> {
       )
     }
     if (differenceInMinutes(timestamp, this.props.firstHalfEnd) < 5) {
-      // throw new Error('Interval must last at least 5 minutes')
+      throw new IntervalTooShortError()
     }
     if (differenceInMinutes(timestamp, this.props.firstHalfEnd) > 25) {
       throw new Error('Interval must not last more than 25 minutes')

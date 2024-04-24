@@ -1,11 +1,4 @@
-// interface DataSavingHandler {
-
-import {
-  inMemoryCompetitionsRepository,
-  inMemoryEventsRepository,
-  inMemoryMatchesRepository,
-  inMemoryTeamsRepository,
-} from '@/infra/publish'
+import { publisher } from '@/infra/start'
 import {
   PrismaClient,
   Competition as PrismaCompetition,
@@ -17,12 +10,11 @@ import {
   StatisticType,
 } from '@prisma/client'
 
-// }
-
 const prisma = new PrismaClient()
+
 export async function dataSavingHandler() {
   const competitions: PrismaCompetition[] = Array.from(
-    inMemoryCompetitionsRepository.competitions.entries(),
+    publisher.inMemoryCompetitionsRepository.competitions.entries(),
   ).map(([id, competition]) => ({
     id: Number(id),
     cc: competition.cc,
@@ -30,7 +22,7 @@ export async function dataSavingHandler() {
   }))
 
   const teams: PrismaTeam[] = Array.from(
-    inMemoryTeamsRepository.teams.entries(),
+    publisher.inMemoryTeamsRepository.teams.entries(),
   ).map(([id, team]) => ({
     id: Number(id),
     name: team.name,
@@ -41,9 +33,9 @@ export async function dataSavingHandler() {
   const odds: PrismaOdd[] = []
 
   const matches: PrismaMatch[] = Array.from(
-    inMemoryMatchesRepository.matches.entries(),
+    publisher.inMemoryMatchesRepository.matches.entries(),
   ).map(([id, match]) => {
-    const event = inMemoryEventsRepository.events.get(id)!
+    const event = publisher.inMemoryEventsRepository.events.get(id)!
 
     const statisticsToPersistence = match.statistics.map((stat) => {
       // get the opposite side value

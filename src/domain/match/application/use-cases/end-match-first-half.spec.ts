@@ -1,5 +1,6 @@
-import { InMemoryMatchesRepository } from '@/infra/cache/repositories/in-memory-matches-repository'
+import { InMemoryMatchesRepository } from '@/infra/repositories/in-memory/in-memory-matches-repository'
 
+import { FirstHalfTooLongError } from '../../enterprise/errors/first-half-too-long-error'
 import { EndMatchFirstHalfUseCase } from './end-match-first-half'
 
 let sut: EndMatchFirstHalfUseCase
@@ -164,6 +165,6 @@ describe('End first half', async () => {
         id: '1',
         timestamp: new Date('2022-01-01T01:01:00Z'),
       }),
-    ).rejects.toThrowError('First half must not last more than 60 minutes')
+    ).rejects.toThrowError(FirstHalfTooLongError)
   })
 })

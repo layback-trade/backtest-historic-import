@@ -1,3 +1,4 @@
+import { ConflictError } from '@/core/errors/conflict-error'
 import { Optional } from '@/core/type-utils'
 import { isBefore } from 'date-fns'
 import { Entity } from '../../../../core/entity'
@@ -31,8 +32,7 @@ export class Event extends Entity<EventProps> {
   addMarket(market: Market) {
     const doesMarketWithSameTypeExist = !!this.getMarketByType(market.type)
     if (this.props.markets.has(market.id) || doesMarketWithSameTypeExist) {
-      // throw new Error('Market duplicated')
-      return
+      throw new ConflictError('Market')
     }
 
     this.props.markets.set(market.id, market)

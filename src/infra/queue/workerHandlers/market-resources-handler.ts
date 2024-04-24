@@ -7,7 +7,7 @@ import {
   MarketStatus,
   MarketType,
 } from '@/domain/market/enterprise/entities/market'
-import { inMemoryEventsRepository } from '@/infra/publish'
+import { publisher } from '@/infra/start'
 
 export interface MarketDefinition {
   eventId: string
@@ -45,12 +45,18 @@ interface MarketResourceHandlerProps {
 }
 
 const turnMarketInPlayUseCase = new TurnMarketInPlayUseCase(
-  inMemoryEventsRepository,
+  publisher.inMemoryEventsRepository,
 )
-const suspendMarketUseCase = new SuspendMarketUseCase(inMemoryEventsRepository)
-const reopenMarketUseCase = new ReopenMarketUseCase(inMemoryEventsRepository)
-const newTradeUseCase = new NewTradeUseCase(inMemoryEventsRepository)
-const closeMarketUseCase = new CloseMarketUseCase(inMemoryEventsRepository)
+const suspendMarketUseCase = new SuspendMarketUseCase(
+  publisher.inMemoryEventsRepository,
+)
+const reopenMarketUseCase = new ReopenMarketUseCase(
+  publisher.inMemoryEventsRepository,
+)
+const newTradeUseCase = new NewTradeUseCase(publisher.inMemoryEventsRepository)
+const closeMarketUseCase = new CloseMarketUseCase(
+  publisher.inMemoryEventsRepository,
+)
 
 export async function marketResourcesHandler({
   data,
@@ -71,7 +77,7 @@ export async function marketResourcesHandler({
     const marketDataUpdate = data[marketDataIndex]
     const { marketDefinition, rc: oddUpdate } = marketDataUpdate.mc[0]
     const timestamp = new Date(marketDataUpdate.pt)
-    const event = await inMemoryEventsRepository.findById(eventId)
+    const event = await publisher.inMemoryEventsRepository.findById(eventId)
 
     const market = event!.getMarketById(marketId)
 
@@ -98,7 +104,7 @@ export async function marketResourcesHandler({
 
       switch (status) {
         case 'OPEN':
-          if (market.status === 'SUSPENDED') {
+          if (market.status !== 'OPEN') {
             await reopenMarketUseCase.execute({
               eventId,
               marketId,
@@ -135,6 +141,4 @@ export async function marketResourcesHandler({
       }
     }
   }
-
-  return inMemoryEventsRepository.events.size
 }

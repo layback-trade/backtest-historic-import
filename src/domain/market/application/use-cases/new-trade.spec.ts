@@ -1,4 +1,4 @@
-import { InMemoryEventsRepository } from '@/infra/cache/repositories/in-memory-events-repository'
+import { InMemoryEventsRepository } from '@/infra/repositories/in-memory/in-memory-events-repository'
 import { NewTradeUseCase } from './new-trade'
 
 let sut: NewTradeUseCase
@@ -18,7 +18,7 @@ describe('New trade', async () => {
         [
           '1',
           {
-            selections: ['team 1', 'team 2'],
+            selections: ['team 1', 'team 2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),
@@ -68,7 +68,7 @@ describe('New trade', async () => {
         [
           '1',
           {
-            selections: ['team 1', 'team 2'],
+            selections: ['team 1', 'team 2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),
@@ -98,7 +98,7 @@ describe('New trade', async () => {
         [
           '1',
           {
-            selections: ['team 1', 'team 2'],
+            selections: ['team 1', 'team 2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),
@@ -127,7 +127,7 @@ describe('New trade', async () => {
         [
           '1',
           {
-            selections: ['team 1', 'team 2'],
+            selections: ['team 1', 'team 2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),

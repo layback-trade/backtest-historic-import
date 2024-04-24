@@ -5,43 +5,45 @@ import { EndMatchFirstHalfUseCase } from '@/domain/match/application/use-cases/e
 import { EndMatchSecondHalfUseCase } from '@/domain/match/application/use-cases/end-match-second-half'
 import { RegisterNewMatchStatisticUseCase } from '@/domain/match/application/use-cases/register-new-match-statistic'
 import { StartMatchSecondHalfUseCase } from '@/domain/match/application/use-cases/start-match-second-half'
-import { dataSavingQueueName, queueInstances } from '@/infra'
+import { IntervalTooShortError } from '@/domain/match/enterprise/errors/Interval-too-short-error'
+import { FirstHalfTooLongError } from '@/domain/match/enterprise/errors/first-half-too-long-error'
+import { DiscordAlert } from '@/infra/logging/discord'
 import { BetsAPIMatchVendor } from '@/infra/match-vendor/betsapi-match-vendor'
-import {
-  eventsToSave,
-  inMemoryCompetitionsRepository,
-  inMemoryMatchesRepository,
-  inMemoryTeamsRepository,
-} from '@/infra/publish'
+import { publisher } from '@/infra/start'
+import { Job } from 'bullmq'
 import { isAfter, isBefore } from 'date-fns'
 
-interface MarketResourceHandlerProps {
-  data: {
-    eventsIdBatch: string[]
-  }
-}
-
 const createCompetitionUseCase = new CreateCompetitionUseCase(
-  inMemoryCompetitionsRepository,
+  publisher.inMemoryCompetitionsRepository,
 )
-const createTeamUseCase = new CreateTeamUseCase(inMemoryTeamsRepository)
-const createMatchUseCase = new CreateMatchUseCase(inMemoryMatchesRepository)
+const createTeamUseCase = new CreateTeamUseCase(
+  publisher.inMemoryTeamsRepository,
+)
+const createMatchUseCase = new CreateMatchUseCase(
+  publisher.inMemoryMatchesRepository,
+)
 const registerNewMatchStatisticUseCase = new RegisterNewMatchStatisticUseCase(
-  inMemoryMatchesRepository,
+  publisher.inMemoryMatchesRepository,
 )
 const endMatchFirstHalfUseCase = new EndMatchFirstHalfUseCase(
-  inMemoryMatchesRepository,
+  publisher.inMemoryMatchesRepository,
 )
 const startMatchSecondHalfUseCase = new StartMatchSecondHalfUseCase(
-  inMemoryMatchesRepository,
+  publisher.inMemoryMatchesRepository,
 )
 const endMatchSecondHalfUseCase = new EndMatchSecondHalfUseCase(
-  inMemoryMatchesRepository,
+  publisher.inMemoryMatchesRepository,
 )
+
 const matchVendor = new BetsAPIMatchVendor()
+
+export interface MarketResourceJobData {
+  eventsIdBatch: string[]
+}
+
 export async function matchResourcesHandler({
   data,
-}: MarketResourceHandlerProps) {
+}: Job<MarketResourceJobData, void, string>) {
   // if(data.eventsIdBatch.length === 0) {
   //   throw new Error('No events to fetch')
   // }
@@ -81,15 +83,27 @@ export async function matchResourcesHandler({
       })
     }
 
-    await endMatchFirstHalfUseCase.execute({
-      id: match.id,
-      timestamp: match.firstHalfEnd,
-    })
-    await startMatchSecondHalfUseCase.execute({
-      id: match.id,
-      timestamp: match.secondHalfStart,
-    })
+    try {
+      await endMatchFirstHalfUseCase.execute({
+        id: match.id,
+        timestamp: match.firstHalfEnd,
+      })
 
+      await startMatchSecondHalfUseCase.execute({
+        id: match.id,
+        timestamp: match.secondHalfStart,
+      })
+    } catch (err) {
+      if (err instanceof FirstHalfTooLongError) {
+        await DiscordAlert.error(`ID da partida: ${match.id} -> ${err.message}`)
+      } else if (err) {
+        if (err instanceof IntervalTooShortError) {
+          await DiscordAlert.error(
+            `ID da partida: ${match.id} -> ${err.message}`,
+          )
+        }
+      }
+    }
     for (const statistic of match.statistics.filter((stat) =>
       isAfter(stat.timestamp, match.firstHalfEnd),
     )) {
@@ -107,18 +121,5 @@ export async function matchResourcesHandler({
         timestamp: match.secondHalfEnd,
       })
     }
-  }
-
-  data.eventsIdBatch.forEach((eventId) => {
-    eventsToSave.add(eventId)
-  })
-
-  if (eventsToSave.size >= 20 || data.eventsIdBatch.length < 10) {
-    // or it's the last event task to save
-    queueInstances.get(dataSavingQueueName)?.add('DATA-SAVING', null, {
-      removeOnComplete: false,
-      removeOnFail: false,
-    })
-    eventsToSave.clear()
   }
 }

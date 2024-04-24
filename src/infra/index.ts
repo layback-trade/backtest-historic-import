@@ -1,36 +1,24 @@
 // import { captureException } from '@sentry/node'
 import { Queue } from 'bullmq'
 import { env } from './env'
-import { publish } from './publish'
 import { createQueue } from './queue/createQueue'
 import { dataSavingHandler } from './queue/workerHandlers/data-saving-handler'
 import { marketResourcesHandler } from './queue/workerHandlers/market-resources-handler'
 import { matchResourcesHandler } from './queue/workerHandlers/match-resources-handler'
-// import { dataProcessingHandler } from './queue/workerHandlers/dataProcessingHandler'
-// import { dataSavingHandler } from './queue/workerHandlers/dataSavingHandler'
-// import { externalResourcesHandler } from './queue/workerHandlers/externalResourcesHandler'
+import { start } from './start'
 
-// const startPrisma = async () => {
-//   await prisma.$connect()
-// }
-// startPrisma()
 // setupSentry()
-
-export const matchResourcesQueueName = env.MATCH_RESOURCES_QUEUE
-export const marketResourcesQueueName = env.MARKET_RESOURCES_QUEUE
-export const dataUnificationQueueName = env.DATA_UNIFICATION_QUEUE
-export const dataSavingQueueName = env.DATA_SAVING_QUEUE
 
 const queues = [
   {
-    name: matchResourcesQueueName,
+    name: env.MATCH_RESOURCES_QUEUE,
     worker: {
       handler: matchResourcesHandler,
       quantity: 2,
     },
   },
   {
-    name: marketResourcesQueueName,
+    name: env.MARKET_RESOURCES_QUEUE,
     worker: {
       handler: marketResourcesHandler,
       quantity: 30,
@@ -44,7 +32,7 @@ const queues = [
   //   },
   // },
   {
-    name: dataSavingQueueName,
+    name: env.DATA_SAVING_QUEUE,
     worker: {
       handler: dataSavingHandler,
       quantity: 1,
@@ -63,9 +51,20 @@ function declareQueues() {
 
 declareQueues()
 
+export const matchResourcesQueue = queueInstances.get(
+  env.MATCH_RESOURCES_QUEUE,
+)!
+export const marketResourcesQueue = queueInstances.get(
+  env.MARKET_RESOURCES_QUEUE,
+)!
+// export const dataUnificationQueue = queueInstances.get(
+//   env.DATA_UNIFICATION_QUEUE,
+// )!
+export const dataSavingQueue = queueInstances.get(env.DATA_SAVING_QUEUE)!
+
 process.on('uncaughtException', async function (err) {
   // captureException(err)
   console.error('Exceção inesperada: ', err)
 })
 
-publish()
+start()

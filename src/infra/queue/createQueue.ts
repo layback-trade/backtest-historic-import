@@ -1,6 +1,8 @@
 import { Queue as BullQueue, Worker as BullWorker, Processor } from 'bullmq'
 
-import { jobsRedis } from '../cache/redis'
+import { env } from '../env'
+import { OnCompleteHandler } from './eventHandlers/onCompleteHandler'
+import { queueRedis } from './redis'
 
 interface CreateQueueParams {
   name: string
@@ -13,33 +15,24 @@ interface CreateQueueParams {
 
 export function createQueue({ name, worker }: CreateQueueParams) {
   const queue = new BullQueue(name, {
-    connection: jobsRedis,
+    connection: queueRedis,
   }).on('error', (err) => {
-    // captureException(err)
     console.error(err)
   })
 
   for (let i = 0; i < worker.quantity; i++) {
     new BullWorker(name, worker.handler, {
-      connection: jobsRedis,
+      connection: queueRedis,
       lockDuration: 1000 * 100,
-    }).on('error', (err) => {
-      // captureException(err)
-      console.error(err)
     })
-    // .on('failed', async (job, err) => {
-    //   if (job) {
-    //     await onQueueFailure({
-    //       err,
-    //       queue: name,
-    //       failedReason: job.failedReason,
-    //       parentId: job.parent?.id,
-    //     })
-    //   }
-    // })
-    // .on('completed', async (job) => {
-    //   // await onQueueComplete({ job, queue: name })
-    // })
+      .on('error', (err) => {
+        console.error(err)
+      })
+      .on('completed', (job) => {
+        if (name === env.MATCH_RESOURCES_QUEUE) {
+          OnCompleteHandler.onMatchProcessed(job)
+        }
+      })
   }
 
   return queue

@@ -25,7 +25,7 @@ export class CreateCompetitionUseCase {
       return
     }
 
-    // Country registred?
+    // Country registered?
 
     const competition = new Competition(
       {

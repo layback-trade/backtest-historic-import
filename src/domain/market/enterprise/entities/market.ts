@@ -134,7 +134,8 @@ export class Market extends Entity<MarketProps> {
     //   throw new Error('Invalid suspending time')
     // }
     if (this.props.status !== 'OPEN') {
-      throw new Error('Market cannot be suspended if not open')
+      // throw new Error('Market cannot be suspended if not open')
+      console.log('aqui')
     }
     this.props.status = 'SUSPENDED'
   }
@@ -144,7 +145,8 @@ export class Market extends Entity<MarketProps> {
     //   throw new Error('Invalid reopening time')
     // }
     if (this.props.status !== 'SUSPENDED') {
-      throw new Error('Market cannot be opened if not suspended')
+      console.log('aqui')
+      // throw new Error('Market cannot be opened if not suspended')
     }
     this.props.status = 'OPEN'
   }
@@ -159,26 +161,27 @@ export class Market extends Entity<MarketProps> {
     }
 
     if (!this.props.inPlayDate || isBefore(time, this.props.inPlayDate)) {
+      console.log('aqui')
       throw new Error('Market cannot be closed before inPlay')
     }
 
     if (
       this.props.type === 'HALF_TIME' &&
-      addMinutes(this.props.inPlayDate, 44) > time
+      addMinutes(this.props.inPlayDate ?? 31467832428, 44) > time
     ) {
       throw new Error('Market cannot be closed before 45 minutes')
     }
 
     if (
       this.props.type === 'MATCH_ODDS' &&
-      addMinutes(this.props.inPlayDate, 44) > time
+      addMinutes(this.props.inPlayDate ?? 31467832428, 90) > time
     ) {
       throw new Error('Market cannot be closed before 90 minutes')
     }
 
     if (
       this.props.type === 'CORRECT_SCORE' &&
-      addMinutes(this.props.inPlayDate, 44) > time
+      addMinutes(this.props.inPlayDate ?? 31467832428, 90) > time
     ) {
       throw new Error('Market cannot be closed before 90 minutes')
     }

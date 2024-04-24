@@ -1,4 +1,4 @@
-import { InMemoryEventsRepository } from '@/infra/cache/repositories/in-memory-events-repository'
+import { InMemoryEventsRepository } from '@/infra/repositories/in-memory/in-memory-events-repository'
 import { TurnMarketInPlayUseCase } from './turn-market-in-play'
 
 let sut: TurnMarketInPlayUseCase
@@ -18,7 +18,7 @@ describe('Turn market in play', async () => {
         [
           '1',
           {
-            selections: ['team 1', 'team 2'],
+            selections: ['team 1', 'team 2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),
@@ -56,7 +56,7 @@ describe('Turn market in play', async () => {
         [
           '1',
           {
-            selections: ['team 1', 'team 2'],
+            selections: ['team 1', 'team 2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),
@@ -84,7 +84,7 @@ describe('Turn market in play', async () => {
         [
           '1',
           {
-            selections: ['team 1', 'team 2'],
+            selections: ['team 1', 'team 2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),

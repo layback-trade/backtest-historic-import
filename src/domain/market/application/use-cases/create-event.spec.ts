@@ -1,4 +1,4 @@
-import { InMemoryEventsRepository } from '@/infra/cache/repositories/in-memory-events-repository'
+import { InMemoryEventsRepository } from '@/infra/repositories/in-memory/in-memory-events-repository'
 import { CreateEventUseCase } from './create-event'
 
 let sut: CreateEventUseCase

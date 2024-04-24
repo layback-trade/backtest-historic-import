@@ -1,4 +1,4 @@
-import { InMemoryEventsRepository } from '@/infra/cache/repositories/in-memory-events-repository'
+import { InMemoryEventsRepository } from '@/infra/repositories/in-memory/in-memory-events-repository'
 import { CloseMarketUseCase } from './close-market'
 
 let sut: CloseMarketUseCase
@@ -18,7 +18,7 @@ describe('Close market', async () => {
         [
           '1',
           {
-            selections: ['1', '2'],
+            selections: ['1', '2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),
@@ -58,7 +58,7 @@ describe('Close market', async () => {
         [
           '1',
           {
-            selections: ['1', '2'],
+            selections: ['1', '2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'CLOSED',
             createdAt: new Date('2022-04-23T12:00:00Z'),
@@ -92,7 +92,7 @@ describe('Close market', async () => {
         [
           '1',
           {
-            selections: ['1', '2'],
+            selections: ['1', '2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),
@@ -125,7 +125,7 @@ describe('Close market', async () => {
         [
           '1',
           {
-            selections: ['1', '2'],
+            selections: ['1', '2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'CLOSED',
             createdAt: new Date('2022-04-23T12:00:00Z'),
@@ -152,7 +152,7 @@ describe('Close market', async () => {
         [
           '1',
           {
-            selections: ['1', '2'],
+            selections: ['1', '2', 'The Draw'],
             type: 'HALF_TIME',
             status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),
@@ -186,7 +186,7 @@ describe('Close market', async () => {
         [
           '1',
           {
-            selections: ['1', '2'],
+            selections: ['1', '2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),

@@ -1,4 +1,4 @@
-import { InMemoryMatchesRepository } from '@/infra/cache/repositories/in-memory-matches-repository'
+import { InMemoryMatchesRepository } from '@/infra/repositories/in-memory/in-memory-matches-repository'
 import { RegisterNewMatchStatisticUseCase } from './register-new-match-statistic'
 
 let sut: RegisterNewMatchStatisticUseCase

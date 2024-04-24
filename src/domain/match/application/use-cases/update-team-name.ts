@@ -13,8 +13,7 @@ export class UpdateTeamNameUseCase {
     const teamExists = await this.teamsRepository.findById(id)
 
     if (!teamExists) {
-      // throw new Error('Team does not exist')
-      return
+      throw new Error('Team does not exist')
     }
 
     // Country registred?

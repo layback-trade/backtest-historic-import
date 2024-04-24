@@ -1,4 +1,5 @@
-import { InMemoryEventsRepository } from '@/infra/cache/repositories/in-memory-events-repository'
+import { ConflictError } from '@/core/errors/conflict-error'
+import { InMemoryEventsRepository } from '@/infra/repositories/in-memory/in-memory-events-repository'
 import { AddEventMarketUseCase } from './add-event-market'
 
 let sut: AddEventMarketUseCase
@@ -21,14 +22,14 @@ describe('Add market for event', async () => {
       eventId: '1',
       createdAt: new Date('2022-04-23T10:00:00Z'),
       marketId: '1',
-      selections: ['1', '2'],
+      selections: ['1', '2', 'The Draw'],
       type: 'MATCH_ODDS',
     })
 
     expect(inMemoryEventRepository.events.get('1')).not.toBeNull()
     expect(inMemoryEventRepository.events.get('1')?.markets.get('1')).toEqual(
       expect.objectContaining({
-        selections: ['1', '2'],
+        selections: ['1', '2', 'The Draw'],
         type: 'MATCH_ODDS',
         status: 'OPEN',
         odds: [],
@@ -44,7 +45,7 @@ describe('Add market for event', async () => {
         [
           '1',
           {
-            selections: ['1', '2'],
+            selections: ['1', '2', 'The Draw'],
             type: 'MATCH_ODDS',
             status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),
@@ -65,9 +66,9 @@ describe('Add market for event', async () => {
         eventId: '1',
         createdAt: new Date('2022-04-23T10:00:00Z'),
         marketId: '2',
-        selections: ['1', '2'],
+        selections: ['1', '2', 'The Draw'],
         type: 'MATCH_ODDS',
       }),
-    ).rejects.toThrow('Market duplicated')
+    ).rejects.toThrowError(ConflictError)
   })
 })

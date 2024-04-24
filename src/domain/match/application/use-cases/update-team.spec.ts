@@ -1,4 +1,4 @@
-import { InMemoryTeamsRepository } from '@/infra/cache/repositories/in-memory-teams-repository'
+import { InMemoryTeamsRepository } from '@/infra/repositories/in-memory/in-memory-teams-repository'
 import { UpdateTeamNameUseCase } from './update-team-name'
 
 let sut: UpdateTeamNameUseCase
