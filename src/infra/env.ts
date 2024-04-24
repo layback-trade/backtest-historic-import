@@ -9,6 +9,7 @@ const _env = z.object({
   DATA_SAVING_QUEUE: z.string(),
   REDIS_URL: z.string(),
   BETSAPI_TOKEN: z.string(),
+  DATABASE_URL: z.string(),
 })
 
 export const env = _env.parse(process.env)

@@ -1,3 +1,5 @@
+import { AddEventMarketUseCase } from '@/domain/market/application/use-cases/add-event-market'
+import { CreateEventUseCase } from '@/domain/market/application/use-cases/create-event'
 import {
   eachDayOfInterval,
   format,
@@ -8,15 +10,39 @@ import {
 import { createReadStream } from 'fs'
 import { readdir } from 'fs/promises'
 import bz2 from 'unbzip2-stream'
-import { marketResourcesQueueName, queueInstances } from '.'
+import {
+  marketResourcesQueueName,
+  matchResourcesQueueName,
+  queueInstances,
+} from '.'
+import { InMemoryCompetitionsRepository } from './cache/repositories/in-memory-competitions-repository'
+import { InMemoryEventsRepository } from './cache/repositories/in-memory-events-repository'
+import { InMemoryMatchesRepository } from './cache/repositories/in-memory-matches-repository'
+import { InMemoryTeamsRepository } from './cache/repositories/in-memory-teams-repository'
 import { FullMarketFile } from './queue/workerHandlers/market-resources-handler'
 
 const path = '/Users/vini/Downloads/betfair_history/NEW_DOWNLOAD'
 
+export const inMemoryEventsRepository = new InMemoryEventsRepository()
+export const inMemoryMatchesRepository = new InMemoryMatchesRepository()
+export const inMemoryTeamsRepository = new InMemoryTeamsRepository()
+export const inMemoryCompetitionsRepository =
+  new InMemoryCompetitionsRepository()
+
+export const createEventUseCase = new CreateEventUseCase(
+  inMemoryEventsRepository,
+)
+export const addEventMarketUseCase = new AddEventMarketUseCase(
+  inMemoryEventsRepository,
+)
+
+export const eventsToSave = new Set<string>()
 export async function publish() {
   const start = new Date('2023-05-20T12:00:00Z')
   const end = new Date('2023-05-20T23:59:59Z')
   const days = eachDayOfInterval({ start, end }).map((day) => ({ day }))
+  const eventsWithMatchFetched = new Set<string>()
+  const eventsToFetchMatch = new Set<string>()
 
   for (const fullDay of days.slice(0, 30)) {
     const year = format(fullDay.day, 'yyyy')
@@ -30,44 +56,111 @@ export async function publish() {
     try {
       console.log(`${day}-${month}-${year}`)
       const eventsId = await readdir(`${path}/${year}/${month}/${day}`)
-      // batch eventsId in 10 parts
-      // const batchedEventsId = []
-      // for (let i = 0; i < eventsId.length; i += 10) {
-      //   batchedEventsId.push(eventsId.slice(i, i + 10))
-      // }
-      // for (const batch of batchedEventsId) {
-      //   await queueInstances.get(externalResourcesQueueName)!.add(
-      //     `EXTERNAL-${batch.join('-')}`,
-      //     {
-      //       eventsToFetchId: batch,
-      //       sourcePath: `${path}/${year}/${month}/${day}`,
-      //     },
-      //     { removeOnComplete: true },
-      //   )
-      // }
-      for (const eventId of eventsId) {
+
+      // do the above in parallel
+      for (const eventId of eventsId.slice(0, 100)) {
         const marketsId = await readdir(
           `${path}/${year}/${month}/${day}/${eventId}`,
         )
+        // read market files, loop through all the results, register in inMemoryEventsRepository, then add to queue
+        console.time('Reading: ' + marketsId.length)
 
-        for (const marketId of marketsId) {
-          const marketPath = `${path}/${year}/${month}/${day}/${eventId}/${marketId}`
-          const fileStr = await Reader.processMarketFile(marketPath)
-          const marketDataJSON: FullMarketFile[] = fileStr
+        const marketsFileString = await Promise.all(
+          marketsId.map((market) => {
+            const marketPath = `${path}/${year}/${month}/${day}/${eventId}/${market}`
+            return Reader.processMarketFile(marketPath)
+          }),
+        )
+        console.timeEnd('Reading: ' + marketsId.length)
+
+        for (const marketStr of marketsFileString) {
+          const marketDataJSON: FullMarketFile[] = marketStr
             .map((marketData) =>
               marketData ? JSON.parse(marketData) : marketData,
             )
             .filter((marketData) => typeof marketData === 'object')
-          await queueInstances
+
+          const marketId = marketDataJSON[0].mc[0].id
+
+          if (!marketDataJSON[0].mc[0].marketDefinition) {
+            throw new Error('Invalid market definition')
+          }
+          const {
+            eventId: event,
+            eventName,
+            marketType,
+            runners,
+            openDate,
+          } = marketDataJSON[0].mc[0].marketDefinition
+          const eventAlreadyExists =
+            await inMemoryEventsRepository.findById(event)
+          if (!eventAlreadyExists) {
+            await createEventUseCase.execute({
+              id: event,
+              name: eventName,
+              scheduledStartDate: openDate,
+            })
+            // dispatch data unification
+          }
+
+          await addEventMarketUseCase.execute({
+            eventId,
+            marketId,
+            type: marketType,
+            selections: runners.map((runner) => runner.name),
+            createdAt: new Date(marketDataJSON[0].pt),
+          })
+
+          queueInstances
             .get(marketResourcesQueueName)!
             .add(`MARKET-${eventId}-${marketId}`, marketDataJSON, {
               removeOnComplete: true,
               // removeOnFail: true,
             })
+
+          if (
+            !eventsWithMatchFetched.has(eventId) &&
+            !eventsToFetchMatch.has(eventId)
+          ) {
+            eventsToFetchMatch.add(eventId)
+          }
+          if (eventsToFetchMatch.size >= 10) {
+            const eventsToFetchMatchArr = Array.from(eventsToFetchMatch)
+            queueInstances.get(matchResourcesQueueName)!.add(
+              `MATCH-${eventsToFetchMatchArr.join('-')}`,
+              { eventsIdBatch: eventsToFetchMatchArr },
+              {
+                removeOnComplete: false,
+                // removeOnFail: true,
+              },
+            )
+
+            eventsToFetchMatch.forEach((eventId) => {
+              eventsWithMatchFetched.add(eventId)
+            })
+            eventsToFetchMatch.clear()
+          }
         }
       }
     } catch (err) {
       console.log(err)
+    } finally {
+      if (eventsToFetchMatch.size > 0) {
+        const eventsToFetchMatchArr = Array.from(eventsToFetchMatch)
+        queueInstances.get(matchResourcesQueueName)!.add(
+          `MATCH-${eventsToFetchMatchArr.join('-')}`,
+          { eventsIdBatch: eventsToFetchMatchArr },
+          {
+            removeOnComplete: false,
+            // removeOnFail: true,
+          },
+        )
+
+        eventsToFetchMatch.forEach((eventId) => {
+          eventsWithMatchFetched.add(eventId)
+        })
+        eventsToFetchMatch.clear()
+      }
     }
   }
 }

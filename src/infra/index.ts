@@ -3,7 +3,9 @@ import { Queue } from 'bullmq'
 import { env } from './env'
 import { publish } from './publish'
 import { createQueue } from './queue/createQueue'
+import { dataSavingHandler } from './queue/workerHandlers/data-saving-handler'
 import { marketResourcesHandler } from './queue/workerHandlers/market-resources-handler'
+import { matchResourcesHandler } from './queue/workerHandlers/match-resources-handler'
 // import { dataProcessingHandler } from './queue/workerHandlers/dataProcessingHandler'
 // import { dataSavingHandler } from './queue/workerHandlers/dataSavingHandler'
 // import { externalResourcesHandler } from './queue/workerHandlers/externalResourcesHandler'
@@ -20,18 +22,18 @@ export const dataUnificationQueueName = env.DATA_UNIFICATION_QUEUE
 export const dataSavingQueueName = env.DATA_SAVING_QUEUE
 
 const queues = [
-  // {
-  //   name: matchResourcesQueueName,
-  //   worker: {
-  //     handler: () => {},
-  //     quantity: 1,
-  //   },
-  // },
+  {
+    name: matchResourcesQueueName,
+    worker: {
+      handler: matchResourcesHandler,
+      quantity: 2,
+    },
+  },
   {
     name: marketResourcesQueueName,
     worker: {
       handler: marketResourcesHandler,
-      quantity: 1,
+      quantity: 30,
     },
   },
   // {
@@ -41,13 +43,13 @@ const queues = [
   //     quantity: 1,
   //   },
   // },
-  // {
-  //   name: dataSavingQueueName,
-  //   worker: {
-  //     handler: () => {},
-  //     quantity: 1,
-  //   },
-  // },
+  {
+    name: dataSavingQueueName,
+    worker: {
+      handler: dataSavingHandler,
+      quantity: 1,
+    },
+  },
 ]
 
 export const queueInstances = new Map<string, Queue<unknown, unknown, string>>()

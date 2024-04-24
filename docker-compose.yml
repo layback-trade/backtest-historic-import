@@ -35,9 +35,9 @@ services:
     ports:
       - 5432:5432
     environment:
-      - POSTGRES_USER=DoCkEr!!  # Substitua por seu nome de usuário
-      - POSTGRES_PASSWORD=BaCkTeSt!!  # Substitua por sua senha
-      - POSTGRES_DB=backtest  # Substitua pelo nome do seu banco de dados
+      - POSTGRES_USER=DoCkEr  # Substitua por seu nome de usuário
+      - POSTGRES_PASSWORD=BaCkTeSt  # Substitua por sua senha
+      - POSTGRES_DB=import  # Substitua pelo nome do seu banco de dados
   queue-cache:
     container_name: backtest-queue-redis
     image: redis

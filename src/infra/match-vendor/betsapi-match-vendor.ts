@@ -1,25 +1,26 @@
+import { StatisticType } from '@/domain/match/enterprise/value-objects/statistic'
 import axios from 'axios'
-import {
-  differenceInSeconds,
-  isBefore,
-  subMilliseconds,
-  subMinutes,
-} from 'date-fns'
+import { differenceInMinutes, isBefore, subMinutes } from 'date-fns'
 import { env } from '../env'
-import { MatchVendor, MatchVendorResponse } from './match-vendor'
+import {
+  MatchVendor,
+  MatchVendorResponse,
+  MatchVendorStatistic,
+} from './match-vendor'
 
 const statisticsMap = new Map([
   ['possession', 'POSSESSION'],
   ['substitutions', 'SUBSTITUTION'],
   ['redcards', 'RED_CARD'],
   ['penalties', 'PENALTY'],
-  ['goals', 'GOAL'],
+  ['goals', 'GOALS'],
   ['corners', 'CORNER'],
   ['attacks', 'ATTACK'],
   ['dangerous_attacks', 'DANGEROUS_ATTACK'],
   ['on_target', 'SHOT_ON_TARGET'],
   ['off_target', 'SHOT_OFF_TARGET'],
   ['yellowcards', 'YELLOW_CARD'],
+  ['score_h', 'HALF_TIME_SCORE' as StatisticType],
 ])
 
 interface BetsAPIMatchResponse {
@@ -83,8 +84,12 @@ interface BetsAPIStatisticsResponse {
   score_h: BetsAPIStatistic
 }
 
+interface ExtendedStatistic extends MatchVendorStatistic {
+  matchTime: number
+}
+
 export class BetsAPIMatchVendor implements MatchVendor {
-  private readonly MAX_PARALLEL_REQUESTS = 5
+  private readonly MAX_PARALLEL_REQUESTS = 3
 
   async fetchMatches(eventsId: string[]): Promise<MatchVendorResponse[]> {
     const batchedEventsId: string[][] = []
@@ -102,8 +107,8 @@ export class BetsAPIMatchVendor implements MatchVendor {
       ),
     )
 
-    const betsAPIMatches: MatchVendorResponse[] = responses.map(
-      (response, batchIndex) => {
+    const betsAPIMatches: MatchVendorResponse[] = responses
+      .map((response, batchIndex) => {
         return response.data.results
           .map((ev: BetsAPIMatchResponse, i: number) => {
             if (response.data.success > 0 && ev.ss) {
@@ -116,7 +121,6 @@ export class BetsAPIMatchVendor implements MatchVendor {
                 firstHalfStart: new Date('2030-01-01'),
                 firstHalfEnd: new Date('2030-01-01'),
                 secondHalfStart: new Date('2030-01-01'),
-                secondHalfEnd: new Date('2030-01-01'),
                 statistics: [],
               }
               return match
@@ -125,146 +129,172 @@ export class BetsAPIMatchVendor implements MatchVendor {
           })
           .filter(Boolean)
           .flat()
-      },
-    )
+      })
+      .flat()
 
-    const matchesBatched = []
+    const matchesVendorIdBatch: string[][] = []
     for (
       let i = 0;
       i < betsAPIMatches.length;
       i += this.MAX_PARALLEL_REQUESTS
     ) {
-      matchesBatched.push(
-        betsAPIMatches.slice(i, i + this.MAX_PARALLEL_REQUESTS),
+      matchesVendorIdBatch.push(
+        betsAPIMatches
+          .map((match) => match.vendorMatchId)
+          .slice(i, i + this.MAX_PARALLEL_REQUESTS),
       )
     }
 
-    for (const matchBatch of matchesBatched) {
-      const statisticsResponse = await Promise.all(
-        matchBatch.map((match) =>
-          axios.get(
-            `https://api.b365api.com/v1/event/stats_trend?token=${process.env.BETS_API_TOKEN}&event_id=${match.vendorMatchId}`,
-          ),
-        ),
-      )
+    for (const vendorsId of matchesVendorIdBatch) {
+      const statistics = await this.fetchStatistics(vendorsId)
 
-      for (const statisticResponse of statisticsResponse) {
-        console.log({
-          teste: statisticResponse.request,
-          url: statisticResponse.headers,
-        })
+      for (const vendorId of vendorsId) {
         const match = betsAPIMatches.find(
-          (match) =>
-            match.vendorMatchId ===
-            statisticResponse.request.responseURL.split('=')[1],
+          (match) => match.vendorMatchId === vendorId,
         )
+
         if (!match) {
-          throw new Error('Error fetching match statistics')
+          throw new Error('Match not found')
         }
 
-        match.statistics = statisticResponse.data.results.map(
-          (stat: BetsAPIStatisticsResponse) => {
-            const statisticsFormatted = Object.entries(stat).map((data) => {
-              const [key, value] = data as [string, BetsAPIStatistic]
-
-              const hasStatisticBeforeFirstHalf =
-                value.home.find((stat) =>
-                  isBefore(
-                    new Date(parseInt(stat.created_at)),
-                    match.firstHalfStart,
-                  ),
-                ) ||
-                value.away.find((stat) =>
-                  isBefore(
-                    new Date(parseInt(stat.created_at)),
-                    match.firstHalfStart,
-                  ),
-                )
-              if (hasStatisticBeforeFirstHalf) {
-                match.firstHalfStart = new Date(
-                  parseInt(hasStatisticBeforeFirstHalf.created_at),
-                )
-              }
-
-              if (
-                key === 'score_h' &&
-                isBefore(
-                  new Date(parseInt(value.home[0].created_at)),
-                  match.firstHalfEnd,
-                )
-              ) {
-                match.firstHalfEnd = new Date(
-                  parseInt(value.home[0].created_at),
-                )
-              }
-
-              const statAtSecondHalf = value.home.find(
-                (stat) =>
-                  parseInt(stat.time_str) >= 60 && parseInt(stat.time_str) < 90,
-              )
-              if (statAtSecondHalf) {
-                const supposedSecondHalfStart = subMinutes(
-                  new Date(parseInt(statAtSecondHalf.created_at)),
-                  parseInt(statAtSecondHalf.time_str) - 46,
-                )
-                const statisticsAtSecondHalfStart = value.home
-                  .filter(
-                    (st) =>
-                      (parseInt(st.time_str) === 46 ||
-                        parseInt(st.time_str) === 45) &&
-                      differenceInSeconds(
-                        supposedSecondHalfStart,
-                        new Date(parseInt(st.created_at)),
-                      ) <= 120,
-                  )
-                  .map((st) => new Date(parseInt(st.created_at)))
-                statisticsAtSecondHalfStart.push(supposedSecondHalfStart)
-                if (
-                  isBefore(
-                    statisticsAtSecondHalfStart[0],
-                    match.secondHalfStart,
-                  )
-                ) {
-                  match.secondHalfStart = statisticsAtSecondHalfStart[0]
-                }
-              }
-
-              const type = statisticsMap.get(key)
-              if (!type) {
-                return []
-              }
-              const home = value.home.map((statistic, index) => {
-                return {
-                  teamSide: 'home',
-                  type,
-                  timestamp: new Date(parseInt(statistic.created_at)),
-                  value: parseInt(statistic.val),
-                  staledAt: subMilliseconds(
-                    new Date(value.home[index + 1].created_at),
-                    1,
-                  ),
-                }
-              })
-              const away = value.away.map((statistic, index) => {
-                return {
-                  teamSide: 'away',
-                  type,
-                  timestamp: new Date(parseInt(statistic.created_at)),
-                  value: parseInt(statistic.val),
-                  staledAt: subMilliseconds(
-                    new Date(value.away[index + 1].created_at),
-                    1,
-                  ),
-                }
-              })
-              return [...home, ...away]
-            })
-
-            return statisticsFormatted.flat()
-          },
+        const matchStatistics = statistics.filter(
+          (stat) => stat.matchId === match.vendorMatchId,
         )
+
+        const { firstHalfEnd, firstHalfStart, secondHalfStart } =
+          this.defineMatchPeriods(matchStatistics)
+
+        match.firstHalfEnd = firstHalfEnd
+        match.firstHalfStart = firstHalfStart
+        match.secondHalfStart = secondHalfStart
+        match.statistics = matchStatistics.filter((st) => st.value !== 0)
       }
     }
     return betsAPIMatches
+  }
+
+  private async fetchStatistics(matchIdsBatch: string[]) {
+    const statisticsResponse = await Promise.all(
+      matchIdsBatch.map((matchId) =>
+        axios.get(
+          `https://api.b365api.com/v1/event/stats_trend?token=${env.BETSAPI_TOKEN}&event_id=${matchId}`,
+        ),
+      ),
+    )
+
+    const statistics = statisticsResponse
+      .map((response) => {
+        return this.formatStatistics(
+          response.data.results,
+          response.config.url!.split('=')[2],
+        )
+      })
+      .flat()
+
+    return statistics
+  }
+
+  private formatStatistics(
+    statistics: BetsAPIStatisticsResponse,
+    matchId: string,
+  ) {
+    return Object.entries(statistics)
+      .map((data) => {
+        const [statisticType, value] = data as [string, BetsAPIStatistic]
+        const type = statisticsMap.get(statisticType)
+        if (!type) {
+          return []
+        }
+
+        return Object.entries(value)
+          .map((valueByTeamSide) => {
+            const [teamSide, statistics] = valueByTeamSide as [
+              'home' | 'away',
+              { time_str: string; val: string; created_at: string }[],
+            ]
+
+            return statistics.map((statistic, index) => {
+              return {
+                matchId,
+                teamSide,
+                type: type as StatisticType,
+                timestamp: new Date(parseInt(statistic.created_at) * 1000),
+                value: parseInt(statistic.val),
+                matchTime: parseInt(statistic.time_str),
+                staledAt: statistics[index + 1]
+                  ? new Date(parseInt(statistics[index + 1].created_at) * 1000)
+                  : null,
+              }
+            })
+          })
+          .flat()
+      })
+      .flat()
+  }
+
+  private defineMatchPeriods(matchStatistics: ExtendedStatistic[]) {
+    const periods = matchStatistics.reduce(
+      (acc, { timestamp, matchTime, type }) => {
+        if (
+          type === ('HALF_TIME_SCORE' as StatisticType) &&
+          isBefore(timestamp, acc.firstHalfEnd)
+        ) {
+          acc.firstHalfEnd = timestamp
+        }
+
+        const isStatInSecondHalf = matchTime >= 60 && matchTime < 90
+        if (isStatInSecondHalf) {
+          const supposedSecondHalfStart = subMinutes(timestamp, matchTime - 45)
+
+          if (isBefore(supposedSecondHalfStart, acc.secondHalfStart)) {
+            acc.secondHalfStart = supposedSecondHalfStart
+          }
+        }
+        return acc
+      },
+      {
+        firstHalfEnd: new Date('2030-01-01'),
+        secondHalfStart: new Date('2030-01-01'),
+      },
+    )
+
+    // Since betsAPI has a weird issue with the timestamps of minute 0 in statistics
+    const { mostLikelyFirstHalfStart } = matchStatistics
+      .filter((st) => st.matchTime === 0)
+      .reduce(
+        (acc, statistic) => {
+          let timeCount = acc.possibleTimes.get(statistic.timestamp.getTime())
+          if (timeCount) {
+            acc.possibleTimes.set(statistic.timestamp.getTime(), timeCount + 1)
+          } else {
+            acc.possibleTimes.set(statistic.timestamp.getTime(), 1)
+          }
+          timeCount = acc.possibleTimes.get(statistic.timestamp.getTime())
+          if (
+            timeCount! >
+            acc.possibleTimes.get(acc.mostLikelyFirstHalfStart.getTime())!
+          ) {
+            acc.mostLikelyFirstHalfStart = statistic.timestamp
+          }
+          return acc
+        },
+        {
+          possibleTimes: new Map<number, number>([
+            [new Date('2030-01-01').getTime(), 0],
+          ]),
+          mostLikelyFirstHalfStart: new Date('2030-01-01'),
+        },
+      )
+
+    if (
+      differenceInMinutes(periods.firstHalfEnd, periods.secondHalfStart) <= 2 &&
+      differenceInMinutes(periods.firstHalfEnd, periods.secondHalfStart) >= -2
+    ) {
+      // console.log('Adjusting periods: ', periods)
+    } else {
+      // console.log('Periods: ', periods)
+    }
+
+    return { ...periods, firstHalfStart: mostLikelyFirstHalfStart }
   }
 }

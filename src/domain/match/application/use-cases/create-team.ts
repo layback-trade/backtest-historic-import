@@ -14,7 +14,8 @@ export class CreateTeamUseCase {
     const teamExists = await this.teamsRepository.findById(id)
 
     if (teamExists) {
-      throw new Error('Team already exists')
+      // throw new Error('Team already exists')
+      return
     }
 
     // Country registred?

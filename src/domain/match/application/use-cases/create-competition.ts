@@ -21,7 +21,8 @@ export class CreateCompetitionUseCase {
     const competitionExists = await this.competitionsRepository.findById(id)
 
     if (competitionExists) {
-      throw new Error('Competition already exists')
+      // throw new Error('Competition already exists')
+      return
     }
 
     // Country registred?

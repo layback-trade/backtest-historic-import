@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Team {
+  name              String
+  id                Int     @id
+  matchesAsAwayTeam Match[] @relation("matchAsAwayTeam")
+  matchesAsHomeTeam Match[] @relation("matchAsHomeTeam")
+
+  @@map("teams")
+}
+
+model Competition {
+  id      Int     @id
+  name    String
+  cc      String?
+  matches Match[]
+
+  @@map("competitions")
+}
+
+model Match {
+  id                 Int         @id
+  name               String
+  scheduledStartDate DateTime    @map("scheduled_start_date")
+  firstHalfStart     DateTime?   @map("first_half_start")
+  // firstHalfEnd                                        DateTime?
+  secondHalfStart    DateTime?   @map("second_half_start")
+  // secondHalfEnd                                       DateTime?
+  homeTeamId         Int         @map("home_team_id")
+  awayTeamId         Int         @map("away_team_id")
+  competitionId      Int         @map("competition_id")
+  // homeTeamScore                                       Int
+  // awayTeamScore                                       Int
+  // homeTeamHTScore                                     Int
+  // awayTeamHTScore                                     Int
+  competition        Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  homeTeam           Team        @relation("matchAsHomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
+  awayTeam           Team        @relation("matchAsAwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
+  // lastteammatches_lastteammatches_eventidlastToevents lastteammatches[] @relation("lastteammatches_eventidlastToevents")
+  // lastteammatches_lastteammatches_idToevents          lastteammatches[] @relation("lastteammatches_idToevents")
+  hasStatistics      Boolean
+  markets            Market[]
+  statistics         Statistic[]
+
+  @@index([scheduledStartDate])
+  @@map("matches")
+}
+
+model Market {
+  id      String @id
+  eventId Int    @map("event_id")
+  type    String
+  event   Match  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  // selections   Selection[]
+  odds    Odd[]
+
+  @@index([type, eventId])
+  @@map("markets")
+}
+
+// model Selection {
+//   id        Int
+//   name      String
+//   market    Market   @relation(fields: [marketId], references: [id], onDelete: Cascade)
+//   marketId  String
+//   odd       Float
+//   hasInPlay Boolean? @default(false)
+//   hasAlert  Boolean? @default(false)
+
+//   operations    Operation[]
+//   selectionOdds SelectionOdd[]
+
+//   @@id([id, marketId])
+//   @@index([marketId])
+//   @@map("selections")
+// }
+
+model Odd {
+  // runnerId  Int      @map("runner_id")
+  runner    String
+  marketId  String   @map("market_id")
+  // gameTime       Int
+  // gameTimeStatus String // GameTimeStatus
+  odd       Float
+  // marketStatus   String
+  createdAt DateTime @map("created_at")
+  staledAt  DateTime @map("staled_at")
+
+  // selection Selection @relation(fields: [runnerId, marketId], references: [id, marketId], onDelete: Cascade)
+  market Market @relation(fields: [marketId], references: [id], onDelete: Cascade)
+
+  @@id([runner, marketId, createdAt])
+  @@map("odds")
+}
+
+// enum GameTimeStatus {
+//   PRELIVE
+//   FIRST_HALF
+//   INTERVAL
+//   SECOND_HALF
+// }
+
+model Statistic {
+  matchId           Int           @map("match_id")
+  type              StatisticType // StatisticType
+  // gameTime          Int
+  // gameTimeStatus    String
+  teamSide          String        @map("team_side") // home or away 
+  value             Int
+  oppositeSideValue Int           @map("opposite_side_value")
+  // originalGameTime  Int
+  createdAt         DateTime      @map("created_at")
+  staledAt          DateTime      @map("staled_at")
+
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@id([matchId, type, createdAt, teamSide])
+  @@map("statistics")
+}
+
+enum StatisticType {
+  GOALS
+  POSSESSION
+  ATTACK
+  CORNER
+  DANGEROUS_ATTACK
+  SUBSTITUTION
+  PENALTY
+  RED_CARD
+  YELLOW_CARD
+  SHOT
+  SHOT_ON_TARGET
+  SHOT_OFF_TARGET
+}

@@ -13,6 +13,7 @@ export class Team extends Entity<TeamProps> {
     return this.props.name
   }
 
+  /* v8 ignore next 3 */
   set name(name: string) {
     this.props.name = name
   }

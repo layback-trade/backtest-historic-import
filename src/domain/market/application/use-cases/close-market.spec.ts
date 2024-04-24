@@ -94,7 +94,7 @@ describe('Close market', async () => {
           {
             selections: ['1', '2'],
             type: 'MATCH_ODDS',
-            status: 'CLOSED',
+            status: 'OPEN',
             createdAt: new Date('2022-04-23T12:00:00Z'),
             odds: [
               {
@@ -114,7 +114,7 @@ describe('Close market', async () => {
         marketId: '1',
         time: new Date('2022-04-23T20:00:00Z'),
       }),
-    ).rejects.toThrow('Market already closed')
+    ).rejects.toThrow('Market cannot be closed before inPlay')
   })
 
   it('should not be able to close a market if the market is already closed without odds', async () => {

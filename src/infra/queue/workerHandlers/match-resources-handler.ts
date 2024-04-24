@@ -5,10 +5,14 @@ import { EndMatchFirstHalfUseCase } from '@/domain/match/application/use-cases/e
 import { EndMatchSecondHalfUseCase } from '@/domain/match/application/use-cases/end-match-second-half'
 import { RegisterNewMatchStatisticUseCase } from '@/domain/match/application/use-cases/register-new-match-statistic'
 import { StartMatchSecondHalfUseCase } from '@/domain/match/application/use-cases/start-match-second-half'
-import { InMemoryCompetitionsRepository } from '@/infra/cache/repositories/in-memory-competitions-repository'
-import { InMemoryMatchesRepository } from '@/infra/cache/repositories/in-memory-matches-repository'
-import { InMemoryTeamsRepository } from '@/infra/cache/repositories/in-memory-teams-repository'
+import { dataSavingQueueName, queueInstances } from '@/infra'
 import { BetsAPIMatchVendor } from '@/infra/match-vendor/betsapi-match-vendor'
+import {
+  eventsToSave,
+  inMemoryCompetitionsRepository,
+  inMemoryMatchesRepository,
+  inMemoryTeamsRepository,
+} from '@/infra/publish'
 import { isAfter, isBefore } from 'date-fns'
 
 interface MarketResourceHandlerProps {
@@ -17,9 +21,6 @@ interface MarketResourceHandlerProps {
   }
 }
 
-const inMemoryMatchesRepository = new InMemoryMatchesRepository()
-const inMemoryCompetitionsRepository = new InMemoryCompetitionsRepository()
-const inMemoryTeamsRepository = new InMemoryTeamsRepository()
 const createCompetitionUseCase = new CreateCompetitionUseCase(
   inMemoryCompetitionsRepository,
 )
@@ -100,13 +101,24 @@ export async function matchResourcesHandler({
         value: statistic.value,
       })
     }
-    if (match.firstHalfEnd) {
+    if (match.secondHalfEnd) {
       await endMatchSecondHalfUseCase.execute({
         id: match.id,
-        timestamp: match.firstHalfEnd,
+        timestamp: match.secondHalfEnd,
       })
     }
   }
 
-  return inMemoryMatchesRepository.matches.size
+  data.eventsIdBatch.forEach((eventId) => {
+    eventsToSave.add(eventId)
+  })
+
+  if (eventsToSave.size >= 20 || data.eventsIdBatch.length < 10) {
+    // or it's the last event task to save
+    queueInstances.get(dataSavingQueueName)?.add('DATA-SAVING', null, {
+      removeOnComplete: false,
+      removeOnFail: false,
+    })
+    eventsToSave.clear()
+  }
 }

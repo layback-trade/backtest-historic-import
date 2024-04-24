@@ -28,6 +28,9 @@ export class Match extends Entity<MatchProps> {
     if (isFuture(props.firstHalfStart)) {
       throw new Error('Match cannot start in the future')
     }
+    if (isBefore(props.firstHalfStart, '2020-01-01')) {
+      throw new Error('Match cannot start before 2020')
+    }
     super({ statistics: [], ...props }, id)
   }
 
@@ -63,6 +66,43 @@ export class Match extends Entity<MatchProps> {
     return this.props.competitionId
   }
 
+  get period() {
+    if (!this.props.firstHalfEnd) {
+      return 'FIRST_HALF'
+    } else if (!this.props.secondHalfStart) {
+      return 'INTERVAL'
+    } else if (!this.props.secondHalfEnd) {
+      return 'SECOND_HALF'
+    }
+    return 'ENDED'
+  }
+
+  get doesMatchHaveStatistics() {
+    return this.props.statistics.length > 0
+  }
+
+  get statisticsFromFirstHalf() {
+    const { firstHalfEnd } = this.props
+    if (!firstHalfEnd) {
+      throw new Error('First half not ended yet')
+    }
+
+    return this.props.statistics.filter((statistic) =>
+      isBefore(statistic.timestamp, firstHalfEnd),
+    )
+  }
+
+  get statisticsFromSecondHalf() {
+    const { secondHalfEnd } = this.props
+    if (!secondHalfEnd) {
+      throw new Error('Second half not ended yet')
+    }
+
+    return this.props.statistics.filter((statistic) =>
+      isBefore(statistic.timestamp, secondHalfEnd),
+    )
+  }
+
   endFirstHalf(timestamp: Date) {
     if (isBefore(timestamp, this.props.firstHalfStart)) {
       throw new Error('First half end must not be earlier than the start')
@@ -77,7 +117,7 @@ export class Match extends Entity<MatchProps> {
       throw new Error('First half must last at least 45 minutes')
     }
     if (differenceInMinutes(timestamp, this.props.firstHalfStart) > 60) {
-      throw new Error('First half must not last more than 60 minutes')
+      // throw new Error('First half must not last more than 60 minutes')
     }
     this.props.firstHalfEnd = timestamp
   }
@@ -95,7 +135,7 @@ export class Match extends Entity<MatchProps> {
       )
     }
     if (differenceInMinutes(timestamp, this.props.firstHalfEnd) < 5) {
-      throw new Error('Interval must last at least 5 minutes')
+      // throw new Error('Interval must last at least 5 minutes')
     }
     if (differenceInMinutes(timestamp, this.props.firstHalfEnd) > 25) {
       throw new Error('Interval must not last more than 25 minutes')
@@ -122,43 +162,13 @@ export class Match extends Entity<MatchProps> {
     this.props.secondHalfEnd = timestamp
   }
 
-  get statisticsFromFirstHalf() {
-    const { firstHalfEnd } = this.props
-    if (!firstHalfEnd) {
-      throw new Error('First half not ended yet')
-    }
-
-    return this.props.statistics.filter((statistic) =>
-      isBefore(statistic.timestamp, firstHalfEnd),
-    )
-  }
-
-  get statisticsFromSecondHalf() {
-    const { secondHalfEnd } = this.props
-    if (!secondHalfEnd) {
-      throw new Error('Second half not ended yet')
-    }
-
-    return this.props.statistics.filter((statistic) =>
-      isBefore(statistic.timestamp, secondHalfEnd),
-    )
-  }
-
-  getLastStatisticFromType(type: StatisticType) {
+  getLastStatisticFromType(type: StatisticType, teamSide: 'home' | 'away') {
     return this.props.statistics
-      .filter((statistic) => statistic.type === type)
+      .filter(
+        (statistic) =>
+          statistic.type === type && statistic.teamSide === teamSide,
+      )
       .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())[0]
-  }
-
-  get period() {
-    if (!this.props.firstHalfEnd) {
-      return 'FIRST_HALF'
-    } else if (!this.props.secondHalfStart) {
-      return 'INTERVAL'
-    } else if (!this.props.secondHalfEnd) {
-      return 'SECOND_HALF'
-    }
-    return 'ENDED'
   }
   // TO-DO: More methods
 
@@ -174,41 +184,45 @@ export class Match extends Entity<MatchProps> {
     switch (this.period) {
       case 'FIRST_HALF':
         if (isBefore(statistic.timestamp, this.firstHalfStart)) {
-          throw new Error(
-            'Statistic cannot be registered before the match starts',
-          )
+          return
+          // throw new Error(
+          //   'Statistic cannot be registered before the match starts',
+          // )
         }
         break
       case 'INTERVAL':
         // if (isAfter(statistic.timestamp, this.firstHalfEnd!)) {
-        throw new Error('Statistic cannot be registered during the interval')
-      // }
-      // break
+        // throw new Error('Statistic cannot be registered during the interval')
+        // }
+        break
       case 'SECOND_HALF':
-        if (isBefore(statistic.timestamp, this.secondHalfStart!)) {
-          throw new Error(
-            'Statistic cannot be registered before the second half starts',
-          )
-        }
+        // if (isBefore(statistic.timestamp, this.secondHalfStart!)) {
+        //   throw new Error(
+        //     'Statistic cannot be registered before the second half starts',
+        //   )
+        // }
         break
       case 'ENDED':
         throw new Error(
           'Statistic cannot be registered after the second half end',
         )
     }
+    // should not be able to register a statistic if the value is less or equal than the last one
+    const lastStatistic = this.getLastStatisticFromType(
+      statistic.type,
+      statistic.teamSide,
+    )
 
     if (
-      this.props.statistics.some(
-        (s) =>
-          s.type === statistic.type &&
-          s.teamSide === statistic.teamSide &&
-          differenceInMinutes(s.timestamp, statistic.timestamp) < 1,
-      )
+      lastStatistic &&
+      statistic.type !== 'GOALS' &&
+      statistic.type !== 'POSSESSION' &&
+      statistic.value < lastStatistic.value
     ) {
-      throw new Error(
-        'Statistic cannot be registered with less than 1 minute difference from another statistic of the same type and team side',
-      )
+      // throw new Error('Invalid statistic value')
+      return
     }
+
     // should validate the last statistic and compare the values?
     // should sort?
     // should validate if its duplicated? or if the value is less than the last one?

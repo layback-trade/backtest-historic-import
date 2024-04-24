@@ -3,6 +3,15 @@ import {
   TeamSide,
 } from '@/domain/match/enterprise/value-objects/statistic'
 
+export interface MatchVendorStatistic {
+  teamSide: TeamSide
+  type: StatisticType
+  value: number
+  timestamp: Date
+  staledAt: Date | null
+  // matchTime: number // To think about
+}
+
 export interface MatchVendorResponse {
   id: string
   vendorMatchId: string
@@ -25,14 +34,7 @@ export interface MatchVendorResponse {
     name: string
     cc: string
   }
-  statistics: {
-    teamSide: TeamSide
-    type: StatisticType
-    value: number
-    timestamp: Date
-    staledAt: Date
-    // matchTime: number // To think about
-  }[]
+  statistics: MatchVendorStatistic[]
 }
 
 export interface MatchVendor {

@@ -14,6 +14,7 @@ export class Entity<Props> {
     return this._id
   }
 
+  /* v8 ignore next 7 */
   public equals(object?: Entity<Props>): boolean {
     if (object === null || object === undefined) {
       return false

@@ -1,6 +1,4 @@
-import { AddEventMarketUseCase } from '@/domain/market/application/use-cases/add-event-market'
 import { CloseMarketUseCase } from '@/domain/market/application/use-cases/close-market'
-import { CreateEventUseCase } from '@/domain/market/application/use-cases/create-event'
 import { NewTradeUseCase } from '@/domain/market/application/use-cases/new-trade'
 import { ReopenMarketUseCase } from '@/domain/market/application/use-cases/reopen-market'
 import { SuspendMarketUseCase } from '@/domain/market/application/use-cases/suspend-market'
@@ -9,7 +7,7 @@ import {
   MarketStatus,
   MarketType,
 } from '@/domain/market/enterprise/entities/market'
-import { InMemoryEventsRepository } from '@/infra/cache/repositories/in-memory-events-repository'
+import { inMemoryEventsRepository } from '@/infra/publish'
 
 export interface MarketDefinition {
   eventId: string
@@ -46,11 +44,6 @@ interface MarketResourceHandlerProps {
   data: FullMarketFile[]
 }
 
-const inMemoryEventsRepository = new InMemoryEventsRepository()
-const createEventUseCase = new CreateEventUseCase(inMemoryEventsRepository)
-const addEventMarketUseCase = new AddEventMarketUseCase(
-  inMemoryEventsRepository,
-)
 const turnMarketInPlayUseCase = new TurnMarketInPlayUseCase(
   inMemoryEventsRepository,
 )
@@ -68,26 +61,7 @@ export async function marketResourcesHandler({
     throw new Error('Invalid market definition')
   }
 
-  const { eventId, eventName, marketType, runners, openDate } =
-    data[0].mc[0].marketDefinition
-
-  let event = await inMemoryEventsRepository.findById(eventId)
-  if (!event) {
-    const { event: eventCreated } = await createEventUseCase.execute({
-      id: eventId,
-      name: eventName,
-      scheduledStartDate: openDate,
-    })
-    event = eventCreated
-  }
-
-  await addEventMarketUseCase.execute({
-    eventId,
-    marketId,
-    type: marketType,
-    selections: runners.map((runner) => runner.name),
-    createdAt: new Date(data[0].pt),
-  })
+  const { eventId, runners } = data[0].mc[0].marketDefinition
 
   for (
     let marketDataIndex = 0;
@@ -97,7 +71,19 @@ export async function marketResourcesHandler({
     const marketDataUpdate = data[marketDataIndex]
     const { marketDefinition, rc: oddUpdate } = marketDataUpdate.mc[0]
     const timestamp = new Date(marketDataUpdate.pt)
-    const market = event.getMarketById(marketId)
+    const event = await inMemoryEventsRepository.findById(eventId)
+
+    const market = event!.getMarketById(marketId)
+
+    if (!market) {
+      console.log({
+        eventmarkets: event?.markets,
+        marketId,
+        event,
+        marketDataUpdate,
+        pastMarketData: data[marketDataIndex - 1],
+      })
+    }
 
     if (marketDefinition) {
       const { inPlay, status } = marketDefinition
@@ -137,6 +123,7 @@ export async function marketResourcesHandler({
     }
 
     if (oddUpdate && oddUpdate.length > 0) {
+      // Should trade if it is more than ten minutes before the event starts?
       for (const { ltp, id } of oddUpdate) {
         await newTradeUseCase.execute({
           eventId: event!.id,

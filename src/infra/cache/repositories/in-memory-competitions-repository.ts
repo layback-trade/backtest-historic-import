@@ -17,13 +17,6 @@ export class InMemoryCompetitionsRepository implements CompetitionsRepository {
     })
   }
 
-  async save(competition: Competition): Promise<void> {
-    this.competitions.set(competition.id, {
-      cc: competition.cc,
-      name: competition.name,
-    })
-  }
-
   async findById(id: string) {
     const competition = this.competitions.get(id)
 

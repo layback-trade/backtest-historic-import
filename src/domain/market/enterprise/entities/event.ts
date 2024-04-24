@@ -29,8 +29,10 @@ export class Event extends Entity<EventProps> {
   }
 
   addMarket(market: Market) {
-    if (this.props.markets.has(market.id)) {
-      throw new Error('Market duplicated')
+    const doesMarketWithSameTypeExist = !!this.getMarketByType(market.type)
+    if (this.props.markets.has(market.id) || doesMarketWithSameTypeExist) {
+      // throw new Error('Market duplicated')
+      return
     }
 
     this.props.markets.set(market.id, market)
@@ -44,6 +46,14 @@ export class Event extends Entity<EventProps> {
     }
 
     return market
+  }
+
+  getMarketByType(type: string): Market | null {
+    const market = Array.from(this.props.markets.values()).find(
+      (m) => m.type === type,
+    )
+
+    return market ?? null
   }
 
   get markets(): Map<string, Market> {

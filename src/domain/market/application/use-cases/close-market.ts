@@ -12,6 +12,7 @@ export class CloseMarketUseCase {
   async execute({ eventId, marketId, time }: CloseMarketUseCaseProps) {
     const event = await this.eventsRepository.findById(eventId)
 
+    /* v8 ignore next 3 */
     if (!event) {
       throw new Error('Event does not exist!')
     }
