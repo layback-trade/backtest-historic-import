@@ -21,7 +21,7 @@ const queues = [
     name: env.MARKET_RESOURCES_QUEUE,
     worker: {
       handler: marketResourcesHandler,
-      quantity: 30,
+      quantity: 1,
     },
   },
   // {

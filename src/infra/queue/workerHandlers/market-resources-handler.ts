@@ -7,6 +7,8 @@ import {
   MarketStatus,
   MarketType,
 } from '@/domain/market/enterprise/entities/market'
+import { MarketWithoutOddsError } from '@/domain/market/enterprise/errors/market-without-odds-error'
+import { DiscordAlert } from '@/infra/logging/discord'
 import { publisher } from '@/infra/start'
 
 export interface MarketDefinition {
@@ -61,6 +63,9 @@ const closeMarketUseCase = new CloseMarketUseCase(
 export async function marketResourcesHandler({
   data,
 }: MarketResourceHandlerProps) {
+  if (!data[0].mc) {
+    console.log('Sem mercado')
+  }
   const marketId = data[0].mc[0].id
 
   if (!data[0].mc[0].marketDefinition) {
@@ -94,6 +99,10 @@ export async function marketResourcesHandler({
     if (marketDefinition) {
       const { inPlay, status } = marketDefinition
 
+      if (marketId === '1.213827747') {
+        console.log('teste')
+      }
+
       if (!market.inPlayDate && inPlay) {
         await turnMarketInPlayUseCase.execute({
           eventId,
@@ -102,29 +111,35 @@ export async function marketResourcesHandler({
         })
       }
 
-      switch (status) {
-        case 'OPEN':
-          if (market.status !== 'OPEN') {
-            await reopenMarketUseCase.execute({
+      try {
+        switch (status) {
+          case 'OPEN':
+            if (market.status !== 'OPEN') {
+              await reopenMarketUseCase.execute({
+                eventId,
+                marketId,
+              })
+            }
+            break
+          case 'SUSPENDED':
+            await suspendMarketUseCase.execute({
               eventId,
               marketId,
+              // time: new Date(timestamp),
             })
-          }
-          break
-        case 'SUSPENDED':
-          await suspendMarketUseCase.execute({
-            eventId,
-            marketId,
-            // time: new Date(timestamp),
-          })
-          break
-        case 'CLOSED':
-          await closeMarketUseCase.execute({
-            eventId,
-            marketId,
-            time: new Date(timestamp),
-          })
-          break
+            break
+          case 'CLOSED':
+            await closeMarketUseCase.execute({
+              eventId,
+              marketId,
+              time: new Date(timestamp),
+            })
+            break
+        }
+      } catch (err) {
+        if (err instanceof MarketWithoutOddsError) {
+          DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+        }
       }
     }
 

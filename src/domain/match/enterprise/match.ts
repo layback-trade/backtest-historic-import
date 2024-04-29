@@ -114,6 +114,7 @@ export class Match extends Entity<MatchProps> {
     }
     if (this.props.statistics.length === 0) {
       throw new Error('Match must have at least one statistic')
+      // Flag no evento e salva
     }
     if (differenceInMinutes(timestamp, this.props.firstHalfStart) < 45) {
       throw new Error('First half must last at least 45 minutes')

@@ -1,6 +1,7 @@
 import { Optional } from '@/core/type-utils'
-import { addMinutes, isAfter, isBefore } from 'date-fns'
+import { isAfter, isBefore } from 'date-fns'
 import { Entity } from '../../../../core/entity'
+import { MarketWithoutOddsError } from '../errors/market-without-odds-error'
 import { Odd } from './value-objects/odd'
 
 export type MarketStatus = 'OPEN' | 'SUSPENDED' | 'CLOSED' // precisa ter o closed mesmo?
@@ -135,7 +136,10 @@ export class Market extends Entity<MarketProps> {
     // }
     if (this.props.status !== 'OPEN') {
       // throw new Error('Market cannot be suspended if not open')
-      console.log('aqui')
+      console.log(
+        'Mercado não está aberto para ser suspenso',
+        this.props.status,
+      )
     }
     this.props.status = 'SUSPENDED'
   }
@@ -145,7 +149,10 @@ export class Market extends Entity<MarketProps> {
     //   throw new Error('Invalid reopening time')
     // }
     if (this.props.status !== 'SUSPENDED') {
-      console.log('aqui')
+      console.log(
+        'Mercado não está suspenso para ser aberto ',
+        this.props.status,
+      )
       // throw new Error('Market cannot be opened if not suspended')
     }
     this.props.status = 'OPEN'
@@ -153,7 +160,7 @@ export class Market extends Entity<MarketProps> {
 
   close(time: Date) {
     if (this.props.odds.length === 0) {
-      throw new Error('Market cannot be closed without odds')
+      throw new MarketWithoutOddsError()
     }
 
     if (this.props.status === 'CLOSED') {
@@ -161,30 +168,44 @@ export class Market extends Entity<MarketProps> {
     }
 
     if (!this.props.inPlayDate || isBefore(time, this.props.inPlayDate)) {
-      console.log('aqui')
-      throw new Error('Market cannot be closed before inPlay')
+      console.log('Mercado fechado sem inPlay')
+      // throw new Error('Market cannot be closed before inPlay')
     }
 
-    if (
-      this.props.type === 'HALF_TIME' &&
-      addMinutes(this.props.inPlayDate ?? 31467832428, 44) > time
-    ) {
-      throw new Error('Market cannot be closed before 45 minutes')
-    }
+    // if (
+    //   this.props.type === 'HALF_TIME' &&
+    //   addMinutes(this.props.inPlayDate, 44) > time
+    // ) {
+    //   console.log(
+    //     'Mercado não pode ser fechado antes de 45 minutos',
+    //     this.props.status,
+    //   )
+    //   throw new Error('Market cannot be closed before 45 minutes')
+    // }
 
-    if (
-      this.props.type === 'MATCH_ODDS' &&
-      addMinutes(this.props.inPlayDate ?? 31467832428, 90) > time
-    ) {
-      throw new Error('Market cannot be closed before 90 minutes')
-    }
+    // if (
+    //   this.props.type === 'MATCH_ODDS' &&
+    //   addMinutes(this.props.inPlayDate, 90) > time
+    // ) {
+    //   console.log(
+    //     'Mercado não pode ser fechado antes de 90 minutos',
+    //     addMinutes(this.props.inPlayDate, 90),
+    //     time,
+    //   )
+    //   throw new Error('Market cannot be closed before 90 minutes')
+    // }
 
-    if (
-      this.props.type === 'CORRECT_SCORE' &&
-      addMinutes(this.props.inPlayDate ?? 31467832428, 90) > time
-    ) {
-      throw new Error('Market cannot be closed before 90 minutes')
-    }
+    // if (
+    //   this.props.type === 'CORRECT_SCORE' &&
+    //   addMinutes(this.props.inPlayDate, 90) > time
+    // ) {
+    //   console.log(
+    //     'Mercado não pode ser fechado antes de 90 minutos',
+    //     addMinutes(this.props.inPlayDate, 90),
+    //     time,
+    //   )
+    //   throw new Error('Market cannot be closed before 90 minutes')
+    // }
 
     this.props.closedAt = time
     this.props.status = 'CLOSED'
