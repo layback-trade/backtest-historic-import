@@ -7,6 +7,9 @@ import {
   MarketStatus,
   MarketType,
 } from '@/domain/market/enterprise/entities/market'
+import { MarketAlreadyClosedError } from '@/domain/market/enterprise/errors/market-already-closed-error'
+import { MarketSuspendedError } from '@/domain/market/enterprise/errors/market-suspended-error'
+import { MarketWithoutInPlayDateError } from '@/domain/market/enterprise/errors/market-without-in-play-date-error'
 import { MarketWithoutOddsError } from '@/domain/market/enterprise/errors/market-without-odds-error'
 import { DiscordAlert } from '@/infra/logging/discord'
 import { publisher } from '@/infra/start'
@@ -20,6 +23,7 @@ export interface MarketDefinition {
   runners: {
     id: number
     name: string
+    status: 'ACTIVE' | 'REMOVED' | 'WINNER' | 'LOSER'
   }[]
   openDate: Date
   settledTime?: Date
@@ -47,23 +51,23 @@ interface MarketResourceHandlerProps {
 }
 
 const turnMarketInPlayUseCase = new TurnMarketInPlayUseCase(
-  publisher.inMemoryEventsRepository,
+  publisher.inMemoryMarketsRepository,
 )
 const suspendMarketUseCase = new SuspendMarketUseCase(
-  publisher.inMemoryEventsRepository,
+  publisher.inMemoryMarketsRepository,
 )
 const reopenMarketUseCase = new ReopenMarketUseCase(
-  publisher.inMemoryEventsRepository,
+  publisher.inMemoryMarketsRepository,
 )
-const newTradeUseCase = new NewTradeUseCase(publisher.inMemoryEventsRepository)
+const newTradeUseCase = new NewTradeUseCase(publisher.inMemoryMarketsRepository)
 const closeMarketUseCase = new CloseMarketUseCase(
-  publisher.inMemoryEventsRepository,
+  publisher.inMemoryMarketsRepository,
 )
 
 export async function marketResourcesHandler({
   data,
 }: MarketResourceHandlerProps) {
-  if (!data[0].mc) {
+  if (!data[0]?.mc) {
     console.log('Sem mercado')
   }
   const marketId = data[0].mc[0].id
@@ -72,7 +76,7 @@ export async function marketResourcesHandler({
     throw new Error('Invalid market definition')
   }
 
-  const { eventId, runners } = data[0].mc[0].marketDefinition
+  const { runners } = data[0].mc[0].marketDefinition
 
   for (
     let marketDataIndex = 0;
@@ -82,30 +86,22 @@ export async function marketResourcesHandler({
     const marketDataUpdate = data[marketDataIndex]
     const { marketDefinition, rc: oddUpdate } = marketDataUpdate.mc[0]
     const timestamp = new Date(marketDataUpdate.pt)
-    const event = await publisher.inMemoryEventsRepository.findById(eventId)
-
-    const market = event!.getMarketById(marketId)
+    const market = await publisher.inMemoryMarketsRepository.findById(marketId)
 
     if (!market) {
       console.log({
-        eventmarkets: event?.markets,
         marketId,
-        event,
         marketDataUpdate,
         pastMarketData: data[marketDataIndex - 1],
       })
+      throw new Error('Weirdo')
     }
 
     if (marketDefinition) {
       const { inPlay, status } = marketDefinition
 
-      if (marketId === '1.213827747') {
-        console.log('teste')
-      }
-
       if (!market.inPlayDate && inPlay) {
         await turnMarketInPlayUseCase.execute({
-          eventId,
           marketId,
           time: new Date(timestamp),
         })
@@ -116,21 +112,18 @@ export async function marketResourcesHandler({
           case 'OPEN':
             if (market.status !== 'OPEN') {
               await reopenMarketUseCase.execute({
-                eventId,
                 marketId,
               })
             }
             break
           case 'SUSPENDED':
             await suspendMarketUseCase.execute({
-              eventId,
               marketId,
               // time: new Date(timestamp),
             })
             break
           case 'CLOSED':
             await closeMarketUseCase.execute({
-              eventId,
               marketId,
               time: new Date(timestamp),
             })
@@ -140,19 +133,33 @@ export async function marketResourcesHandler({
         if (err instanceof MarketWithoutOddsError) {
           DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
         }
+        if (err instanceof MarketAlreadyClosedError) {
+          DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+        }
+        if (err instanceof MarketSuspendedError) {
+          DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+        }
+        if (err instanceof MarketWithoutInPlayDateError) {
+          DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+        }
       }
     }
 
     if (oddUpdate && oddUpdate.length > 0) {
       // Should trade if it is more than ten minutes before the event starts?
-      for (const { ltp, id } of oddUpdate) {
-        await newTradeUseCase.execute({
-          eventId: event!.id,
-          marketId: market.id,
-          selection: runners.find((runner) => runner.id === Number(id))!.name,
-          odd: ltp,
-          timestamp,
-        })
+      try {
+        for (const { ltp, id } of oddUpdate) {
+          await newTradeUseCase.execute({
+            marketId: market.id,
+            selection: runners.find((runner) => runner.id === Number(id))!.name,
+            odd: ltp,
+            timestamp,
+          })
+        }
+      } catch (err) {
+        if (err instanceof MarketAlreadyClosedError) {
+          DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+        }
       }
     }
   }

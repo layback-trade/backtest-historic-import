@@ -95,6 +95,8 @@ export async function matchResourcesHandler({
       })
     } catch (err) {
       if (err instanceof FirstHalfTooLongError) {
+        // score_h da betsapi veio referente ao fim do intervalo e não fim do primeiro tempo
+        // Ou não veio score_h
         await DiscordAlert.error(`ID da partida: ${match.id} -> ${err.message}`)
       } else if (err) {
         if (err instanceof IntervalTooShortError) {

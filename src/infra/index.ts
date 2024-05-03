@@ -6,7 +6,6 @@ import { dataSavingHandler } from './queue/workerHandlers/data-saving-handler'
 import { marketResourcesHandler } from './queue/workerHandlers/market-resources-handler'
 import { matchResourcesHandler } from './queue/workerHandlers/match-resources-handler'
 import { start } from './start'
-
 // setupSentry()
 
 const queues = [
@@ -21,7 +20,7 @@ const queues = [
     name: env.MARKET_RESOURCES_QUEUE,
     worker: {
       handler: marketResourcesHandler,
-      quantity: 1,
+      quantity: 30,
     },
   },
   // {

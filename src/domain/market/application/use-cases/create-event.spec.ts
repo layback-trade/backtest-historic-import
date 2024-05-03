@@ -2,12 +2,12 @@ import { InMemoryEventsRepository } from '@/infra/repositories/in-memory/in-memo
 import { CreateEventUseCase } from './create-event'
 
 let sut: CreateEventUseCase
-let inMemoryEventRepository: InMemoryEventsRepository
+let inMemoryEventsRepository: InMemoryEventsRepository
 
 describe('Create event', async () => {
   beforeEach(() => {
-    inMemoryEventRepository = new InMemoryEventsRepository()
-    sut = new CreateEventUseCase(inMemoryEventRepository)
+    inMemoryEventsRepository = new InMemoryEventsRepository()
+    sut = new CreateEventUseCase(inMemoryEventsRepository)
   })
 
   it('should be able to create an event', async () => {
@@ -17,20 +17,18 @@ describe('Create event', async () => {
       scheduledStartDate: new Date('2022-04-23'),
     })
 
-    expect(inMemoryEventRepository.events.get('1')).toEqual(
+    expect(inMemoryEventsRepository.events.get('1')).toEqual(
       expect.objectContaining({
         name: 'Team 1 v Team 2',
         scheduledStartDate: new Date('2022-04-23'),
-        markets: new Map(),
       }),
     )
   })
 
   it('should not be able to add a event that already exists', async () => {
-    inMemoryEventRepository.events.set('1', {
+    inMemoryEventsRepository.events.set('1', {
       name: 'Team 1 v Team 2',
       scheduledStartDate: new Date('2022-04-23'),
-      markets: new Map(),
     })
 
     expect(() =>

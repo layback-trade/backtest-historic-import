@@ -4,7 +4,7 @@ import { CompetitionsRepository } from '../repositories/competitions-repository'
 
 interface CreateCompetitionUseCaseProps {
   name: string
-  cc: string
+  cc?: string
   id: string
 }
 
@@ -30,7 +30,7 @@ export class CreateCompetitionUseCase {
     const competition = new Competition(
       {
         name,
-        cc: new Country(cc),
+        cc: cc ? new Country(cc) : undefined,
       },
       id,
     )

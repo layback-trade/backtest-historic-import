@@ -3,7 +3,7 @@ import { Country } from './country'
 
 interface CompetitionProps {
   name: string
-  cc: Country
+  cc?: Country
 }
 
 export class Competition extends Entity<CompetitionProps> {
@@ -15,7 +15,7 @@ export class Competition extends Entity<CompetitionProps> {
     return this.props.name
   }
 
-  get cc(): string {
-    return this.props.cc.code
+  get cc(): string | undefined {
+    return this.props.cc?.code
   }
 }

@@ -27,6 +27,7 @@ export class CreateMatchUseCase {
 
     // const homeTeamExists = await this.teamsRepository.findById(homeTeamId)
     // const awayTeamExists = await this.teamsRepository.findById(homeTeamId)
+    // const competitionExists = await this.competitionsRepository.findById(competitionId)
 
     const match = new Match(
       {

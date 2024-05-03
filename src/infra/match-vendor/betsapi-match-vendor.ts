@@ -1,6 +1,6 @@
 import { StatisticType } from '@/domain/match/enterprise/value-objects/statistic'
 import axios from 'axios'
-import { differenceInMinutes, isBefore, subMinutes } from 'date-fns'
+import { differenceInMinutes, isBefore, isFuture, subMinutes } from 'date-fns'
 import { env } from '../env'
 import {
   MatchVendor,
@@ -161,13 +161,18 @@ export class BetsAPIMatchVendor implements MatchVendor {
           (stat) => stat.matchId === match.vendorMatchId,
         )
 
-        const { firstHalfEnd, firstHalfStart, secondHalfStart } =
-          this.defineMatchPeriods(matchStatistics)
+        if (matchStatistics.length > 0) {
+          const { firstHalfEnd, firstHalfStart, secondHalfStart } =
+            this.defineMatchPeriods(matchStatistics)
 
-        match.firstHalfEnd = firstHalfEnd
-        match.firstHalfStart = firstHalfStart
-        match.secondHalfStart = secondHalfStart
-        match.statistics = matchStatistics.filter((st) => st.value !== 0)
+          match.firstHalfEnd = firstHalfEnd
+          match.firstHalfStart = firstHalfStart
+          match.secondHalfStart = secondHalfStart
+          match.statistics = matchStatistics.filter((st) => st.value !== 0)
+        } else {
+          // remove match from the list
+          betsAPIMatches.splice(betsAPIMatches.indexOf(match), 1)
+        }
       }
     }
     return betsAPIMatches
@@ -250,42 +255,59 @@ export class BetsAPIMatchVendor implements MatchVendor {
             acc.secondHalfStart = supposedSecondHalfStart
           }
         }
+
+        const isStatInFirstHalf = matchTime >= 0 && matchTime < 45
+        if (isStatInFirstHalf) {
+          const supposedFirstHalfStart = subMinutes(timestamp, matchTime)
+
+          if (isBefore(supposedFirstHalfStart, acc.supposedFirstHalfStart)) {
+            acc.supposedFirstHalfStart = supposedFirstHalfStart
+          }
+        }
         return acc
       },
       {
+        supposedFirstHalfStart: new Date('2030-01-01'),
         firstHalfEnd: new Date('2030-01-01'),
         secondHalfStart: new Date('2030-01-01'),
       },
     )
 
-    // Since betsAPI has a weird issue with the timestamps of minute 0 in statistics
+    // Since betsAPI has a weird behavior with the timestamps of minute 0 in statistics
     const { mostLikelyFirstHalfStart } = matchStatistics
       .filter((st) => st.matchTime === 0)
       .reduce(
         (acc, statistic) => {
           let timeCount = acc.possibleTimes.get(statistic.timestamp.getTime())
+
           if (timeCount) {
             acc.possibleTimes.set(statistic.timestamp.getTime(), timeCount + 1)
           } else {
             acc.possibleTimes.set(statistic.timestamp.getTime(), 1)
           }
+
           timeCount = acc.possibleTimes.get(statistic.timestamp.getTime())
+
           if (
             timeCount! >
             acc.possibleTimes.get(acc.mostLikelyFirstHalfStart.getTime())!
           ) {
             acc.mostLikelyFirstHalfStart = statistic.timestamp
           }
+
           return acc
         },
         {
           possibleTimes: new Map<number, number>([
-            [new Date('2030-01-01').getTime(), 0],
+            [periods.supposedFirstHalfStart.getTime(), 0],
           ]),
-          mostLikelyFirstHalfStart: new Date('2030-01-01'),
+          mostLikelyFirstHalfStart: periods.supposedFirstHalfStart,
         },
       )
 
+    if (isFuture(mostLikelyFirstHalfStart)) {
+      console.log(matchStatistics)
+    }
     if (
       differenceInMinutes(periods.firstHalfEnd, periods.secondHalfStart) <= 2 &&
       differenceInMinutes(periods.firstHalfEnd, periods.secondHalfStart) >= -2

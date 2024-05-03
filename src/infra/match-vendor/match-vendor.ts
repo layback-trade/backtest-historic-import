@@ -15,9 +15,9 @@ export interface MatchVendorStatistic {
 export interface MatchVendorResponse {
   id: string
   vendorMatchId: string
-  firstHalfStart: Date
-  firstHalfEnd: Date
-  secondHalfStart: Date
+  firstHalfStart?: Date
+  firstHalfEnd?: Date
+  secondHalfStart?: Date
   secondHalfEnd?: Date
   homeTeam: {
     id: string

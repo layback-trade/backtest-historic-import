@@ -4,7 +4,7 @@ import { Country } from '@/domain/match/enterprise/country'
 
 interface InMemoryPersistenceCompetition {
   name: string
-  cc: string
+  cc?: string
 }
 
 export class InMemoryCompetitionsRepository implements CompetitionsRepository {
@@ -23,7 +23,7 @@ export class InMemoryCompetitionsRepository implements CompetitionsRepository {
     return competition
       ? new Competition(
           {
-            cc: new Country(competition.cc),
+            cc: competition.cc ? new Country(competition.cc) : undefined,
             name: competition.name,
           },
           id,

@@ -1,28 +1,27 @@
 import { UpdateTeamNameUseCase } from '@/domain/match/application/use-cases/update-team-name'
-import {
-  inMemoryEventsRepository,
-  inMemoryMatchesRepository,
-  inMemoryTeamsRepository,
-} from '@/infra/publish'
+import { publisher } from '@/infra/start'
+
 import { differenceInMinutes } from 'date-fns'
 
 interface DataUnificationHandlerProps {
   eventId: string
 }
 
-const updateTeamNameUseCase = new UpdateTeamNameUseCase(inMemoryTeamsRepository)
+const updateTeamNameUseCase = new UpdateTeamNameUseCase(
+  publisher.inMemoryTeamsRepository,
+)
 
 export async function dataUnificationHandler({
   eventId,
 }: DataUnificationHandlerProps) {
-  const event = await inMemoryEventsRepository.findById(eventId)
-  const match = await inMemoryMatchesRepository.findById(eventId)
+  const event = await publisher.inMemoryEventsRepository.findById(eventId)
+  const match = await publisher.inMemoryMatchesRepository.findById(eventId)
 
   if (!event || !match) {
     throw new Error('Event and match already exist')
   }
 
-  /* Define other periods time and if needed the game time,
+  /* Define and VERIFY other periods time and if needed the game time,
    * Second half end -> Match_odds closedAt -> Last statistic staledAt.
    * First half end -> HALF_TIME closedAt
    * Suspend odds based on statistics (goal)
@@ -32,6 +31,17 @@ export async function dataUnificationHandler({
    * Team side inversion
    * Red flags
    */
+
+  // if (
+  //   this.props.type === 'HALF_TIME' &&
+  //   addMinutes(this.props.inPlayDate, 44) > time
+  // ) {
+  //   console.log(
+  //     'Mercado não pode ser fechado antes de 45 minutos',
+  //     this.props.status,
+  //   )
+  //   // throw new Error('Market cannot be closed before 45 minutes')
+  // }
 
   // const matchOddsMarket = event.getMarketByType('MATCH_ODDS')
 

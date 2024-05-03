@@ -1,11 +1,12 @@
 import { ConflictError } from '@/core/errors/conflict-error'
-import { AddEventMarketUseCase } from '@/domain/market/application/use-cases/add-event-market'
 import { CreateEventUseCase } from '@/domain/market/application/use-cases/create-event'
+import { CreateMarketUseCase } from '@/domain/market/application/use-cases/create-market'
 import { dataSavingQueue, marketResourcesQueue, matchResourcesQueue } from '.'
 import { DiscordAlert } from './logging/discord'
 import { FullMarketFile } from './queue/workerHandlers/market-resources-handler'
 import { InMemoryCompetitionsRepository } from './repositories/in-memory/in-memory-competitions-repository'
 import { InMemoryEventsRepository } from './repositories/in-memory/in-memory-events-repository'
+import { InMemoryMarketsRepository } from './repositories/in-memory/in-memory-markets-repository'
 import { InMemoryMatchesRepository } from './repositories/in-memory/in-memory-matches-repository'
 import { InMemoryTeamsRepository } from './repositories/in-memory/in-memory-teams-repository'
 
@@ -14,15 +15,16 @@ export class Publisher {
   private currentEventsToFetchMatch = new Set<string>()
   public currentEventsToSave = new Set<string>()
   private MINIMUM_EVENTS_BATCH_SIZE_TO_FETCHING = 10
-  private MINIMUM_EVENTS_BATCH_SIZE_TO_SAVING = 20
+  private MINIMUM_EVENTS_BATCH_SIZE_TO_SAVING = 200
 
   constructor(
     public inMemoryEventsRepository: InMemoryEventsRepository,
     public inMemoryMatchesRepository: InMemoryMatchesRepository,
     public inMemoryTeamsRepository: InMemoryTeamsRepository,
     public inMemoryCompetitionsRepository: InMemoryCompetitionsRepository,
+    public inMemoryMarketsRepository: InMemoryMarketsRepository,
     private createEventUseCase: CreateEventUseCase,
-    private addEventMarketUseCase: AddEventMarketUseCase,
+    private createMarketUseCase: CreateMarketUseCase,
   ) {}
 
   async publishAll(marketData: FullMarketFile[]) {
@@ -47,13 +49,24 @@ export class Publisher {
         })
       }
 
-      await this.addEventMarketUseCase.execute({
-        eventId,
-        marketId,
-        type: marketType,
-        selections: runners.map((runner) => runner.name),
-        createdAt: new Date(marketData[0].pt),
-      })
+      const isMarketInvalid = marketData
+        .at(-1)
+        ?.mc[0].marketDefinition?.runners.every(
+          (runner) => runner.status === 'REMOVED',
+        )
+
+      if (!isMarketInvalid) {
+        await this.createMarketUseCase.execute({
+          eventId,
+          marketId,
+          type: marketType,
+          selections: runners.map((runner) => runner.name),
+          createdAt: new Date(marketData[0].pt),
+        })
+      } else {
+        // WARN -> Market without data
+        return
+      }
     } catch (err) {
       if (err instanceof ConflictError) {
         DiscordAlert.error(`
@@ -110,7 +123,7 @@ export class Publisher {
     }
   }
 
-  public publishEventsToSave(shouldOverpassBatchMinimum = false) {
+  public publishMatchesToSave(shouldOverpassBatchMinimum = false) {
     if (this.currentEventsToSave.size === 0) return
 
     const reachTheBatchMinimum =
@@ -123,15 +136,5 @@ export class Publisher {
       })
       this.currentEventsToSave.clear()
     }
-
-    const eventsToSaveToArray = Array.from(this.currentEventsToSave)
-    marketResourcesQueue.add(
-      `SAVE-${eventsToSaveToArray.join('-')}`,
-      { eventsIdBatch: eventsToSaveToArray },
-      {
-        removeOnComplete: true,
-        // removeOnFail: true,
-      },
-    )
   }
 }

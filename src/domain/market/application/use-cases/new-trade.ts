@@ -1,8 +1,7 @@
 import { Odd } from '../../enterprise/entities/value-objects/odd'
-import { EventsRepository } from '../repositories/events-repository'
+import { MarketsRepository } from '../repositories/markets-repository'
 
 interface NewTradeUseCaseProps {
-  eventId: string
   marketId: string
   selection: string
   timestamp: Date
@@ -10,23 +9,20 @@ interface NewTradeUseCaseProps {
 }
 
 export class NewTradeUseCase {
-  constructor(private eventsRepository: EventsRepository) {}
+  constructor(private marketsRepository: MarketsRepository) {}
 
   async execute({
-    eventId,
     marketId,
     selection,
     timestamp,
     odd: oddValue,
   }: NewTradeUseCaseProps) {
-    const event = await this.eventsRepository.findById(eventId)
+    const market = await this.marketsRepository.findById(marketId)
 
     /* v8 ignore next 3 */
-    if (!event) {
-      throw new Error('Event does not exist!')
+    if (!market) {
+      throw new Error('Market does not exist!')
     }
-
-    const market = event.getMarketById(marketId)
 
     const odd = new Odd({
       selection,
@@ -36,6 +32,6 @@ export class NewTradeUseCase {
 
     market.trade(odd)
 
-    await this.eventsRepository.save(event)
+    await this.marketsRepository.save(market)
   }
 }

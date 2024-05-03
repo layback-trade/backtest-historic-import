@@ -1,44 +1,34 @@
-import { InMemoryEventsRepository } from '@/infra/repositories/in-memory/in-memory-events-repository'
+import { InMemoryMarketsRepository } from '@/infra/repositories/in-memory/in-memory-markets-repository'
+import { MarketAlreadyClosedError } from '../../enterprise/errors/market-already-closed-error'
 import { NewTradeUseCase } from './new-trade'
 
 let sut: NewTradeUseCase
-let inMemoryEventRepository: InMemoryEventsRepository
+let inMemoryMarketsRepository: InMemoryMarketsRepository
 
 describe('New trade', async () => {
   beforeEach(() => {
-    inMemoryEventRepository = new InMemoryEventsRepository()
-    sut = new NewTradeUseCase(inMemoryEventRepository)
+    inMemoryMarketsRepository = new InMemoryMarketsRepository()
+    sut = new NewTradeUseCase(inMemoryMarketsRepository)
   })
 
   it('should be able to make a trade', async () => {
-    inMemoryEventRepository.events.set('1', {
-      name: 'team 1 v team 2',
-      scheduledStartDate: new Date('2022-04-23T18:00:00Z'),
-      markets: new Map([
-        [
-          '1',
-          {
-            selections: ['team 1', 'team 2', 'The Draw'],
-            type: 'MATCH_ODDS',
-            status: 'OPEN',
-            createdAt: new Date('2022-04-23T12:00:00Z'),
-            odds: [],
-          },
-        ],
-      ]),
+    inMemoryMarketsRepository.markets.set('1', {
+      selections: ['team 1', 'team 2', 'The Draw'],
+      eventId: '1',
+      type: 'MATCH_ODDS',
+      status: 'OPEN',
+      createdAt: new Date('2022-04-23T12:00:00Z'),
+      odds: [],
     })
 
     await sut.execute({
-      eventId: '1',
       marketId: '1',
       odd: 1.25,
       selection: 'team 1',
       timestamp: new Date('2022-04-23T12:08:34Z'),
     })
 
-    expect(
-      inMemoryEventRepository.events.get('1')?.markets.get('1')?.odds,
-    ).toEqual([
+    expect(inMemoryMarketsRepository.markets.get('1')?.odds).toEqual([
       {
         value: 1.25,
         selection: 'team 1',
@@ -47,70 +37,39 @@ describe('New trade', async () => {
     ])
   })
 
-  /*
-    RULES TO VALIDATE:
-     if (this.props.closedAt) {
-      throw new Error('Market already closed')
-    }
-    if (!this.props.selections.includes(odd.selection)) {
-      throw new Error('Selection not belongs to this market')
-    }
-    if (isBefore(odd.timestamp, this.props.createdAt)) {
-      throw new Error('Invalid odd time')
-    }
-  */
-
   it('should not be able to make a trade if the market is already closed', async () => {
-    inMemoryEventRepository.events.set('1', {
-      name: 'team 1 v team 2',
-      scheduledStartDate: new Date('2022-04-23T18:00:00Z'),
-      markets: new Map([
-        [
-          '1',
-          {
-            selections: ['team 1', 'team 2', 'The Draw'],
-            type: 'MATCH_ODDS',
-            status: 'OPEN',
-            createdAt: new Date('2022-04-23T12:00:00Z'),
-            closedAt: new Date('20222-04-23T20:00:00Z'),
-            odds: [],
-          },
-        ],
-      ]),
+    inMemoryMarketsRepository.markets.set('1', {
+      selections: ['team 1', 'team 2', 'The Draw'],
+      eventId: '1',
+      type: 'MATCH_ODDS',
+      status: 'OPEN',
+      createdAt: new Date('2022-04-23T12:00:00Z'),
+      closedAt: new Date('20222-04-23T20:00:00Z'),
+      odds: [],
     })
 
     expect(() =>
       sut.execute({
-        eventId: '1',
         marketId: '1',
         odd: 1.25,
         selection: 'team 1',
         timestamp: new Date('2022-04-23T15:08:34Z'), // timestamp before closedAt but closedAt is set
       }),
-    ).rejects.toThrowError('Market already closed')
+    ).rejects.toThrowError(MarketAlreadyClosedError)
   })
 
   it('should not be able to make a trade if the selection does not belong to the market', async () => {
-    inMemoryEventRepository.events.set('1', {
-      name: 'team 1 v team 2',
-      scheduledStartDate: new Date('2022-04-23T18:00:00Z'),
-      markets: new Map([
-        [
-          '1',
-          {
-            selections: ['team 1', 'team 2', 'The Draw'],
-            type: 'MATCH_ODDS',
-            status: 'OPEN',
-            createdAt: new Date('2022-04-23T12:00:00Z'),
-            odds: [],
-          },
-        ],
-      ]),
+    inMemoryMarketsRepository.markets.set('1', {
+      selections: ['team 1', 'team 2', 'The Draw'],
+      eventId: '1',
+      type: 'MATCH_ODDS',
+      status: 'OPEN',
+      createdAt: new Date('2022-04-23T12:00:00Z'),
+      odds: [],
     })
 
     expect(() =>
       sut.execute({
-        eventId: '1',
         marketId: '1',
         odd: 1.25,
         selection: 'over 2.5',
@@ -120,26 +79,17 @@ describe('New trade', async () => {
   })
 
   it('should not be able to make a trade if the odd timestamp is before the market creation date', async () => {
-    inMemoryEventRepository.events.set('1', {
-      name: 'team 1 v team 2',
-      scheduledStartDate: new Date('2022-04-23T18:00:00Z'),
-      markets: new Map([
-        [
-          '1',
-          {
-            selections: ['team 1', 'team 2', 'The Draw'],
-            type: 'MATCH_ODDS',
-            status: 'OPEN',
-            createdAt: new Date('2022-04-23T12:00:00Z'),
-            odds: [],
-          },
-        ],
-      ]),
+    inMemoryMarketsRepository.markets.set('1', {
+      selections: ['team 1', 'team 2', 'The Draw'],
+      eventId: '1',
+      type: 'MATCH_ODDS',
+      status: 'OPEN',
+      createdAt: new Date('2022-04-23T12:00:00Z'),
+      odds: [],
     })
 
     expect(() =>
       sut.execute({
-        eventId: '1',
         marketId: '1',
         odd: 1.25,
         selection: 'team 1',

@@ -12,6 +12,6 @@ export class OnCompleteHandler {
 
     const isTheLastMatchJob = data.eventsIdBatch.length < 10
 
-    publisher.publishEventsToSave(isTheLastMatchJob)
+    publisher.publishMatchesToSave(isTheLastMatchJob)
   }
 }
