@@ -1,14 +1,14 @@
 import { ConflictError } from '@/core/errors/conflict-error'
 import { CreateEventUseCase } from '@/domain/market/application/use-cases/create-event'
 import { CreateMarketUseCase } from '@/domain/market/application/use-cases/create-market'
-import { dataSavingQueue, marketResourcesQueue, matchResourcesQueue } from '.'
+
+import {
+  inMemoryEventsRepository,
+  inMemoryMarketsRepository,
+} from './http/make-instances'
+import { queues } from './http/server'
 import { DiscordAlert } from './logging/discord'
 import { FullMarketFile } from './queue/workerHandlers/market-resources-handler'
-import { InMemoryCompetitionsRepository } from './repositories/in-memory/in-memory-competitions-repository'
-import { InMemoryEventsRepository } from './repositories/in-memory/in-memory-events-repository'
-import { InMemoryMarketsRepository } from './repositories/in-memory/in-memory-markets-repository'
-import { InMemoryMatchesRepository } from './repositories/in-memory/in-memory-matches-repository'
-import { InMemoryTeamsRepository } from './repositories/in-memory/in-memory-teams-repository'
 
 export class Publisher {
   private eventsWithMatchAlreadyFetched = new Set<string>()
@@ -16,16 +16,16 @@ export class Publisher {
   public currentEventsToSave = new Set<string>()
   private MINIMUM_EVENTS_BATCH_SIZE_TO_FETCHING = 10
   private MINIMUM_EVENTS_BATCH_SIZE_TO_SAVING = 200
+  private createEventUseCase = new CreateEventUseCase(inMemoryEventsRepository)
+  private createMarketUseCase = new CreateMarketUseCase(
+    inMemoryMarketsRepository,
+    inMemoryEventsRepository,
+  )
 
-  constructor(
-    public inMemoryEventsRepository: InMemoryEventsRepository,
-    public inMemoryMatchesRepository: InMemoryMatchesRepository,
-    public inMemoryTeamsRepository: InMemoryTeamsRepository,
-    public inMemoryCompetitionsRepository: InMemoryCompetitionsRepository,
-    public inMemoryMarketsRepository: InMemoryMarketsRepository,
-    private createEventUseCase: CreateEventUseCase,
-    private createMarketUseCase: CreateMarketUseCase,
-  ) {}
+  private _matchesAdded = 0
+
+  public importId: string = ''
+  public importType: 'event' | 'period' = 'period'
 
   async publishAll(marketData: FullMarketFile[]) {
     const marketId = marketData[0].mc[0].id
@@ -39,7 +39,7 @@ export class Publisher {
       marketData[0].mc[0].marketDefinition
     try {
       const eventAlreadyExists =
-        await this.inMemoryEventsRepository.findById(eventId)
+        await inMemoryEventsRepository.findById(eventId)
 
       if (!eventAlreadyExists) {
         await this.createEventUseCase.execute({
@@ -65,6 +65,7 @@ export class Publisher {
         })
       } else {
         // WARN -> Market without data
+        DiscordAlert.error('Market without data')
         return
       }
     } catch (err) {
@@ -82,7 +83,7 @@ export class Publisher {
 
     // Manage queues
 
-    marketResourcesQueue.add(`MARKET-${eventId}-${marketId}`, marketData, {
+    queues.marketQueue.add(`MARKET-${eventId}-${marketId}`, marketData, {
       removeOnComplete: true,
       // removeOnFail: true,
     })
@@ -92,7 +93,7 @@ export class Publisher {
       this.currentEventsToFetchMatch.add(eventId)
     }
 
-    this.publishMatches()
+    this.publishMatches(this.importType === 'event')
   }
 
   public publishMatches(shouldOverpassBatchMinimum = false) {
@@ -102,12 +103,19 @@ export class Publisher {
       this.currentEventsToFetchMatch.size >=
       this.MINIMUM_EVENTS_BATCH_SIZE_TO_FETCHING
 
-    if (reachTheBatchMinimum || shouldOverpassBatchMinimum) {
+    const shouldPublish = reachTheBatchMinimum || shouldOverpassBatchMinimum
+    if (shouldPublish) {
+      let jobName = 'MATCH'
+      if (shouldOverpassBatchMinimum) {
+        jobName = 'MATCH-OVERPASS'
+        this.eventsWithMatchAlreadyFetched.clear()
+      }
+
       const eventsToFetchMatchToArray = Array.from(
         this.currentEventsToFetchMatch,
       )
-      matchResourcesQueue.add(
-        `MATCH-${eventsToFetchMatchToArray.join('-')}`,
+      queues.matchQueue.add(
+        `${jobName}-${eventsToFetchMatchToArray.join('-')}`,
         { eventsIdBatch: eventsToFetchMatchToArray },
         {
           removeOnComplete: true,
@@ -130,11 +138,23 @@ export class Publisher {
       this.currentEventsToSave.size >= this.MINIMUM_EVENTS_BATCH_SIZE_TO_SAVING
 
     if (reachTheBatchMinimum || shouldOverpassBatchMinimum) {
-      dataSavingQueue.add('DATA-SAVING', null, {
+      queues.dataSavingQueue.add('DATA-SAVING', null, {
         removeOnComplete: false,
         removeOnFail: false,
       })
       this.currentEventsToSave.clear()
     }
+  }
+
+  get matchesAdded() {
+    return this._matchesAdded
+  }
+
+  public incrementMatchesAdded(matchesQuantity: number) {
+    this._matchesAdded += matchesQuantity
+  }
+
+  public resetMatchesAdded() {
+    this._matchesAdded = 0
   }
 }

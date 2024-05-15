@@ -7,6 +7,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum ImportStatus {
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model Import {
+  id                    String       @id
+  createdAt             DateTime     @default(now())
+  status                ImportStatus
+  endedAt               DateTime?
+  startDate             DateTime?
+  endDate               DateTime?
+  specificEventId       String?
+  eventsAdded           Int?
+  totalEvents           Int?
+  totalEventsWithMarket Int?
+
+  @@map("imports")
+}
+
 model Team {
   name              String
   id                Int     @id

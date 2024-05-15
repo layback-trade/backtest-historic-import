@@ -1,12 +1,8 @@
 import { StatisticType } from '@/domain/match/enterprise/value-objects/statistic'
 import axios from 'axios'
 import { differenceInMinutes, isBefore, isFuture, subMinutes } from 'date-fns'
+import { MatchVendor, MatchVendorResponse, MatchVendorStatistic } from '.'
 import { env } from '../env'
-import {
-  MatchVendor,
-  MatchVendorResponse,
-  MatchVendorStatistic,
-} from './match-vendor'
 
 const statisticsMap = new Map([
   ['possession', 'POSSESSION'],

@@ -55,4 +55,8 @@ export class InMemoryMatchesRepository implements MatchesRepository {
         )
       : null
   }
+
+  async count(): Promise<number> {
+    return this.matches.size
+  }
 }

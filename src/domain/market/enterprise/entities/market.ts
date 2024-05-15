@@ -189,7 +189,7 @@ export class Market extends Entity<MarketProps> {
         addMinutes(this.props.inPlayDate, 90),
         time,
       )
-      throw new Error('Market cannot be closed before 90 minutes')
+      // throw new Error('Market cannot be closed before 90 minutes')
     }
 
     if (
@@ -201,7 +201,7 @@ export class Market extends Entity<MarketProps> {
         addMinutes(this.props.inPlayDate, 90),
         time,
       )
-      throw new Error('Market cannot be closed before 90 minutes')
+      // throw new Error('Market cannot be closed before 90 minutes')
     }
 
     this.props.closedAt = time

@@ -11,8 +11,10 @@ import { MarketAlreadyClosedError } from '@/domain/market/enterprise/errors/mark
 import { MarketSuspendedError } from '@/domain/market/enterprise/errors/market-suspended-error'
 import { MarketWithoutInPlayDateError } from '@/domain/market/enterprise/errors/market-without-in-play-date-error'
 import { MarketWithoutOddsError } from '@/domain/market/enterprise/errors/market-without-odds-error'
+import { inMemoryMarketsRepository } from '@/infra/http/make-instances'
 import { DiscordAlert } from '@/infra/logging/discord'
-import { publisher } from '@/infra/start'
+import { Job } from 'bullmq'
+import { WorkerHandler } from '../interfaces/worker-handler'
 
 export interface MarketDefinition {
   eventId: string
@@ -46,119 +48,119 @@ export interface FullMarketFile {
   pt: number
 }
 
-interface MarketResourceHandlerProps {
-  data: FullMarketFile[]
-}
+export class MarketResourcesHandler implements WorkerHandler<FullMarketFile[]> {
+  private turnMarketInPlayUseCase = new TurnMarketInPlayUseCase(
+    inMemoryMarketsRepository,
+  )
 
-const turnMarketInPlayUseCase = new TurnMarketInPlayUseCase(
-  publisher.inMemoryMarketsRepository,
-)
-const suspendMarketUseCase = new SuspendMarketUseCase(
-  publisher.inMemoryMarketsRepository,
-)
-const reopenMarketUseCase = new ReopenMarketUseCase(
-  publisher.inMemoryMarketsRepository,
-)
-const newTradeUseCase = new NewTradeUseCase(publisher.inMemoryMarketsRepository)
-const closeMarketUseCase = new CloseMarketUseCase(
-  publisher.inMemoryMarketsRepository,
-)
+  private suspendMarketUseCase = new SuspendMarketUseCase(
+    inMemoryMarketsRepository,
+  )
 
-export async function marketResourcesHandler({
-  data,
-}: MarketResourceHandlerProps) {
-  if (!data[0]?.mc) {
-    console.log('Sem mercado')
-  }
-  const marketId = data[0].mc[0].id
+  private reopenMarketUseCase = new ReopenMarketUseCase(
+    inMemoryMarketsRepository,
+  )
 
-  if (!data[0].mc[0].marketDefinition) {
-    throw new Error('Invalid market definition')
+  private newTradeUseCase = new NewTradeUseCase(inMemoryMarketsRepository)
+
+  private closeMarketUseCase = new CloseMarketUseCase(inMemoryMarketsRepository)
+
+  constructor() {
+    this.process = this.process.bind(this)
   }
 
-  const { runners } = data[0].mc[0].marketDefinition
+  async process({ data }: Job<FullMarketFile[]>) {
+    const marketId = data[0].mc[0].id
 
-  for (
-    let marketDataIndex = 0;
-    marketDataIndex < data.length;
-    marketDataIndex++
-  ) {
-    const marketDataUpdate = data[marketDataIndex]
-    const { marketDefinition, rc: oddUpdate } = marketDataUpdate.mc[0]
-    const timestamp = new Date(marketDataUpdate.pt)
-    const market = await publisher.inMemoryMarketsRepository.findById(marketId)
-
-    if (!market) {
-      console.log({
-        marketId,
-        marketDataUpdate,
-        pastMarketData: data[marketDataIndex - 1],
-      })
-      throw new Error('Weirdo')
+    if (!data[0].mc[0].marketDefinition) {
+      throw new Error('Invalid market definition')
     }
 
-    if (marketDefinition) {
-      const { inPlay, status } = marketDefinition
+    const { runners } = data[0].mc[0].marketDefinition
 
-      if (!market.inPlayDate && inPlay) {
-        await turnMarketInPlayUseCase.execute({
+    for (
+      let marketDataIndex = 0;
+      marketDataIndex < data.length;
+      marketDataIndex++
+    ) {
+      const marketDataUpdate = data[marketDataIndex]
+      const { marketDefinition, rc: oddUpdate } = marketDataUpdate.mc[0]
+      const timestamp = new Date(marketDataUpdate.pt)
+      const market = await inMemoryMarketsRepository.findById(marketId)
+
+      if (!market) {
+        console.log({
           marketId,
-          time: new Date(timestamp),
+          marketDataUpdate,
+          pastMarketData: data[marketDataIndex - 1],
         })
+        throw new Error('Weirdo')
       }
 
-      try {
-        switch (status) {
-          case 'OPEN':
-            if (market.status !== 'OPEN') {
-              await reopenMarketUseCase.execute({
-                marketId,
-              })
-            }
-            break
-          case 'SUSPENDED':
-            await suspendMarketUseCase.execute({
-              marketId,
-              // time: new Date(timestamp),
-            })
-            break
-          case 'CLOSED':
-            await closeMarketUseCase.execute({
-              marketId,
-              time: new Date(timestamp),
-            })
-            break
-        }
-      } catch (err) {
-        if (err instanceof MarketWithoutOddsError) {
-          DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
-        }
-        if (err instanceof MarketAlreadyClosedError) {
-          DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
-        }
-        if (err instanceof MarketSuspendedError) {
-          DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
-        }
-        if (err instanceof MarketWithoutInPlayDateError) {
-          DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
-        }
-      }
-    }
+      if (marketDefinition) {
+        const { inPlay, status } = marketDefinition
 
-    if (oddUpdate && oddUpdate.length > 0) {
-      // Should trade if it is more than ten minutes before the event starts?
-      try {
-        for (const { ltp, id } of oddUpdate) {
-          await newTradeUseCase.execute({
-            marketId: market.id,
-            selection: runners.find((runner) => runner.id === Number(id))!.name,
-            odd: ltp,
-            timestamp,
+        if (!market.inPlayDate && inPlay) {
+          await this.turnMarketInPlayUseCase.execute({
+            marketId,
+            time: new Date(timestamp),
           })
         }
-      } catch (err) {
-        if (err instanceof MarketAlreadyClosedError) {
-          DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+
+        try {
+          switch (status) {
+            case 'OPEN':
+              if (market.status !== 'OPEN') {
+                await this.reopenMarketUseCase.execute({
+                  marketId,
+                })
+              }
+              break
+            case 'SUSPENDED':
+              await this.suspendMarketUseCase.execute({
+                marketId,
+                // time: new Date(timestamp),
+              })
+              break
+            case 'CLOSED':
+              await this.closeMarketUseCase.execute({
+                marketId,
+                time: new Date(timestamp),
+              })
+              break
+          }
+        } catch (err) {
+          if (err instanceof MarketWithoutOddsError) {
+            DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+          }
+          if (err instanceof MarketAlreadyClosedError) {
+            DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+          }
+          if (err instanceof MarketSuspendedError) {
+            DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+          }
+          if (err instanceof MarketWithoutInPlayDateError) {
+            DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+          }
+        }
+      }
+
+      if (oddUpdate && oddUpdate.length > 0) {
+        // Should trade if it is more than ten minutes before the event starts?
+        try {
+          for (const { ltp, id } of oddUpdate) {
+            await this.newTradeUseCase.execute({
+              marketId: market.id,
+              selection: runners.find((runner) => runner.id === Number(id))!
+                .name,
+              odd: ltp,
+              timestamp,
+            })
+          }
+        } catch (err) {
+          if (err instanceof MarketAlreadyClosedError) {
+            DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+          }
         }
       }
     }

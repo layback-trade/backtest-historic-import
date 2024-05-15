@@ -1,5 +1,9 @@
 import { UpdateTeamNameUseCase } from '@/domain/match/application/use-cases/update-team-name'
-import { publisher } from '@/infra/start'
+import {
+  inMemoryEventsRepository,
+  inMemoryMatchesRepository,
+  inMemoryTeamsRepository,
+} from '@/infra/http/make-instances'
 
 import { differenceInMinutes } from 'date-fns'
 
@@ -7,15 +11,13 @@ interface DataUnificationHandlerProps {
   eventId: string
 }
 
-const updateTeamNameUseCase = new UpdateTeamNameUseCase(
-  publisher.inMemoryTeamsRepository,
-)
+const updateTeamNameUseCase = new UpdateTeamNameUseCase(inMemoryTeamsRepository)
 
 export async function dataUnificationHandler({
   eventId,
 }: DataUnificationHandlerProps) {
-  const event = await publisher.inMemoryEventsRepository.findById(eventId)
-  const match = await publisher.inMemoryMatchesRepository.findById(eventId)
+  const event = await inMemoryEventsRepository.findById(eventId)
+  const match = await inMemoryMatchesRepository.findById(eventId)
 
   if (!event || !match) {
     throw new Error('Event and match already exist')

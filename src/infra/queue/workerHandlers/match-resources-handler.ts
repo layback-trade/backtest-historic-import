@@ -8,120 +8,133 @@ import { StartMatchSecondHalfUseCase } from '@/domain/match/application/use-case
 import { IntervalTooShortError } from '@/domain/match/enterprise/errors/Interval-too-short-error'
 import { FirstHalfTooLongError } from '@/domain/match/enterprise/errors/first-half-too-long-error'
 import { DiscordAlert } from '@/infra/logging/discord'
-import { BetsAPIMatchVendor } from '@/infra/match-vendor/betsapi-match-vendor'
-import { publisher } from '@/infra/start'
+import { MatchVendor } from '@/infra/match-vendor'
+
+import {
+  inMemoryCompetitionsRepository,
+  inMemoryMatchesRepository,
+  inMemoryTeamsRepository,
+} from '@/infra/http/make-instances'
 import { Job } from 'bullmq'
 import { isAfter, isBefore } from 'date-fns'
+import { WorkerHandler } from '../interfaces/worker-handler'
 
-const createCompetitionUseCase = new CreateCompetitionUseCase(
-  publisher.inMemoryCompetitionsRepository,
-)
-const createTeamUseCase = new CreateTeamUseCase(
-  publisher.inMemoryTeamsRepository,
-)
-const createMatchUseCase = new CreateMatchUseCase(
-  publisher.inMemoryMatchesRepository,
-)
-const registerNewMatchStatisticUseCase = new RegisterNewMatchStatisticUseCase(
-  publisher.inMemoryMatchesRepository,
-)
-const endMatchFirstHalfUseCase = new EndMatchFirstHalfUseCase(
-  publisher.inMemoryMatchesRepository,
-)
-const startMatchSecondHalfUseCase = new StartMatchSecondHalfUseCase(
-  publisher.inMemoryMatchesRepository,
-)
-const endMatchSecondHalfUseCase = new EndMatchSecondHalfUseCase(
-  publisher.inMemoryMatchesRepository,
-)
-
-const matchVendor = new BetsAPIMatchVendor()
-
-export interface MarketResourceJobData {
+export interface MarketResourcesPayload {
   eventsIdBatch: string[]
 }
 
-export async function matchResourcesHandler({
-  data,
-}: Job<MarketResourceJobData, void, string>) {
-  // if(data.eventsIdBatch.length === 0) {
-  //   throw new Error('No events to fetch')
-  // }
-  // if(data.eventsIdBatch.length > 10) {
-  //   throw new Error('Too many events to fetch')
-  // }
+export class MatchResourcesHandler
+  implements WorkerHandler<MarketResourcesPayload>
+{
+  private createCompetitionUseCase = new CreateCompetitionUseCase(
+    inMemoryCompetitionsRepository,
+  )
 
-  // Verify if the events exist in the repository
+  private createTeamUseCase = new CreateTeamUseCase(inMemoryTeamsRepository)
 
-  // call the external service to fetch the events
-  const matches = await matchVendor.fetchMatches(data.eventsIdBatch)
+  private createMatchUseCase = new CreateMatchUseCase(inMemoryMatchesRepository)
 
-  for (const match of matches) {
-    await Promise.all([
-      createCompetitionUseCase.execute(match.competition),
-      createTeamUseCase.execute(match.homeTeam),
-      createTeamUseCase.execute(match.awayTeam),
-    ])
+  private registerNewMatchStatisticUseCase =
+    new RegisterNewMatchStatisticUseCase(inMemoryMatchesRepository)
 
-    await createMatchUseCase.execute({
-      awayTeamId: match.awayTeam.id,
-      competitionId: match.competition.id,
-      homeTeamId: match.homeTeam.id,
-      id: match.id,
-      firstHalfStart: match.firstHalfStart,
-    })
+  private endMatchFirstHalfUseCase = new EndMatchFirstHalfUseCase(
+    inMemoryMatchesRepository,
+  )
 
-    for (const statistic of match.statistics.filter((stat) =>
-      isBefore(stat.timestamp, match.firstHalfEnd),
-    )) {
-      await registerNewMatchStatisticUseCase.execute({
-        matchId: match.id,
-        teamSide: statistic.teamSide,
-        timestamp: statistic.timestamp,
-        type: statistic.type,
-        value: statistic.value,
-      })
-    }
+  private startMatchSecondHalfUseCase = new StartMatchSecondHalfUseCase(
+    inMemoryMatchesRepository,
+  )
 
-    try {
-      await endMatchFirstHalfUseCase.execute({
+  private endMatchSecondHalfUseCase = new EndMatchSecondHalfUseCase(
+    inMemoryMatchesRepository,
+  )
+
+  constructor(private matchVendor: MatchVendor) {
+    this.process = this.process.bind(this)
+  }
+
+  async process({ data }: Job<MarketResourcesPayload>) {
+    // if(data.eventsIdBatch.length === 0) {
+    //   throw new Error('No events to fetch')
+    // }
+    // if(data.eventsIdBatch.length > 10) {
+    //   throw new Error('Too many events to fetch')
+    // }
+
+    // Verify if the events exist in the repository
+
+    // call the external service to fetch the events
+    const matches = await this.matchVendor.fetchMatches(data.eventsIdBatch)
+
+    for (const match of matches) {
+      await Promise.all([
+        this.createCompetitionUseCase.execute(match.competition),
+        this.createTeamUseCase.execute(match.homeTeam),
+        this.createTeamUseCase.execute(match.awayTeam),
+      ])
+
+      await this.createMatchUseCase.execute({
+        awayTeamId: match.awayTeam.id,
+        competitionId: match.competition.id,
+        homeTeamId: match.homeTeam.id,
         id: match.id,
-        timestamp: match.firstHalfEnd,
+        firstHalfStart: match.firstHalfStart,
       })
 
-      await startMatchSecondHalfUseCase.execute({
-        id: match.id,
-        timestamp: match.secondHalfStart,
-      })
-    } catch (err) {
-      if (err instanceof FirstHalfTooLongError) {
-        // score_h da betsapi veio referente ao fim do intervalo e não fim do primeiro tempo
-        // Ou não veio score_h
-        await DiscordAlert.error(`ID da partida: ${match.id} -> ${err.message}`)
-      } else if (err) {
-        if (err instanceof IntervalTooShortError) {
+      for (const statistic of match.statistics.filter((stat) =>
+        isBefore(stat.timestamp, match.firstHalfEnd),
+      )) {
+        await this.registerNewMatchStatisticUseCase.execute({
+          matchId: match.id,
+          teamSide: statistic.teamSide,
+          timestamp: statistic.timestamp,
+          type: statistic.type,
+          value: statistic.value,
+        })
+      }
+
+      try {
+        await this.endMatchFirstHalfUseCase.execute({
+          id: match.id,
+          timestamp: match.firstHalfEnd,
+        })
+
+        await this.startMatchSecondHalfUseCase.execute({
+          id: match.id,
+          timestamp: match.secondHalfStart,
+        })
+      } catch (err) {
+        if (err instanceof FirstHalfTooLongError) {
+          // score_h da betsapi veio referente ao fim do intervalo e não fim do primeiro tempo
+          // Ou não veio score_h
           await DiscordAlert.error(
             `ID da partida: ${match.id} -> ${err.message}`,
           )
+        } else if (err) {
+          if (err instanceof IntervalTooShortError) {
+            await DiscordAlert.error(
+              `ID da partida: ${match.id} -> ${err.message}`,
+            )
+          }
         }
       }
-    }
-    for (const statistic of match.statistics.filter((stat) =>
-      isAfter(stat.timestamp, match.firstHalfEnd),
-    )) {
-      await registerNewMatchStatisticUseCase.execute({
-        matchId: match.id,
-        teamSide: statistic.teamSide,
-        timestamp: statistic.timestamp,
-        type: statistic.type,
-        value: statistic.value,
-      })
-    }
-    if (match.secondHalfEnd) {
-      await endMatchSecondHalfUseCase.execute({
-        id: match.id,
-        timestamp: match.secondHalfEnd,
-      })
+      for (const statistic of match.statistics.filter((stat) =>
+        isAfter(stat.timestamp, match.firstHalfEnd),
+      )) {
+        await this.registerNewMatchStatisticUseCase.execute({
+          matchId: match.id,
+          teamSide: statistic.teamSide,
+          timestamp: statistic.timestamp,
+          type: statistic.type,
+          value: statistic.value,
+        })
+      }
+      if (match.secondHalfEnd) {
+        await this.endMatchSecondHalfUseCase.execute({
+          id: match.id,
+          timestamp: match.secondHalfEnd,
+        })
+      }
     }
   }
 }

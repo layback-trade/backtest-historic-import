@@ -23,11 +23,12 @@ export class DiscordAlert {
     const avatarUrl =
       'https://firebasestorage.googleapis.com/v0/b/layback-43391.appspot.com/o/Images%2Ferror.png?alt=media'
     try {
-      axios.post(url, {
-        content: message,
-        username,
-        avatar_url: avatarUrl,
-      })
+      // axios.post(url, {
+      //   content: message,
+      //   username,
+      //   avatar_url: avatarUrl,
+      // })
+      console.log('Erro enviado')
     } catch (error: unknown) {
       console.log(error)
     }

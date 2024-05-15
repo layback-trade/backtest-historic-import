@@ -1,4 +1,4 @@
-import { odds } from '@/infra/queue/workerHandlers/helpers/calculateOddGap'
+import { odds } from '@/infra/queue/helpers/calculateOddGap'
 import { isBefore, isFuture } from 'date-fns'
 
 interface OddProps {

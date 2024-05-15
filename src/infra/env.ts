@@ -10,6 +10,8 @@ const _env = z.object({
   REDIS_URL: z.string(),
   BETSAPI_TOKEN: z.string(),
   DATABASE_URL: z.string(),
+  PORT: z.coerce.number().default(8888),
+  BASE_FILES_PATH: z.string(),
 })
 
 export const env = _env.parse(process.env)
