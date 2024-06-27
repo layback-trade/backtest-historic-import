@@ -6,6 +6,7 @@ import './make-instances'
 
 import { Publisher } from '../publisher'
 import { QueueManager } from '../queue/queue-manager'
+import { HealthController } from './controllers/health'
 import { ListImportsController } from './controllers/list-imports'
 import { RemoteEventImportController } from './controllers/remote-event-import'
 import { RemoteImportController } from './controllers/remote-import'
@@ -18,6 +19,7 @@ export const publisher = new Publisher()
 const remoteImportController = new RemoteImportController()
 const remoteEventImportController = new RemoteEventImportController()
 const listImportsController = new ListImportsController()
+const healthController = new HealthController()
 server.register(cors, {
   origin: '*',
 })
@@ -25,6 +27,7 @@ server.register(cors, {
 server.post('/import', remoteImportController.handle)
 server.post('/event-import', remoteEventImportController.handle)
 server.get('/imports', listImportsController.handle)
+server.get('/health', healthController.handle)
 
 server.setErrorHandler((error, _, reply) => {
   if (error instanceof ZodError) {
