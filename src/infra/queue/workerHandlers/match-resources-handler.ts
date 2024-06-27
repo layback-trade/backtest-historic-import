@@ -65,9 +65,6 @@ export class MatchResourcesHandler
     const matches = await this.matchVendor.fetchMatches(data.eventsIdBatch)
 
     for (const match of matches) {
-      if (!match.secondHalfStart || !match.firstHalfEnd) {
-        console.log('Sem first half end ou second half start 2', { match })
-      }
       await Promise.all([
         this.createCompetitionUseCase.execute(match.competition),
         // this.createTeamUseCase.execute(match.homeTeam),
@@ -95,9 +92,6 @@ export class MatchResourcesHandler
       }
 
       try {
-        if (!match.firstHalfEnd || !match.secondHalfStart) {
-          console.log('Sem first half end ou second half start 3', { match })
-        }
         await this.endMatchFirstHalfUseCase.execute({
           id: match.id,
           timestamp: match.firstHalfEnd,

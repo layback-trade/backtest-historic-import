@@ -2,7 +2,7 @@ import { Market } from '@/domain/market/enterprise/entities/market'
 import { Odd } from '@/domain/market/enterprise/entities/value-objects/odd'
 import { Selection } from '@/domain/market/enterprise/entities/value-objects/selection'
 import { Statistic as PrismaStatistic } from '@prisma/client'
-import { InvalidateOdds, PrismaOddsMapper2 } from './prisma-odds.mapper'
+import { PrismaOddsMapper2 } from './prisma-odds.mapper'
 
 describe('Invalidade odds', () => {
   it('should suspend market when there is a goal', () => {
@@ -50,6 +50,7 @@ describe('Invalidade odds', () => {
         gameTimeStatus: 'FIRST_HALF',
         gameTimePeriod: 0,
         status: 'REGULAR',
+        originalGameTime: -1
       },
     ]
 

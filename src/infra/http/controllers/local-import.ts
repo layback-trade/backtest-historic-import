@@ -1,4 +1,4 @@
-import { StartImportUseCase } from '@/domain/import/application/use-cases/start-import'
+// import { StartImportUseCase } from '@/domain/import/application/use-cases/start-import'
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
 
@@ -13,11 +13,11 @@ export class LocalImportController {
   async handle(req: FastifyRequest, reply: FastifyReply) {
     try {
       const body = localImportBodySchema.parse(req.body)
-      const localImportUseCase = new StartImportUseCase()
-      await localImportUseCase.execute({
-        ...body,
-        // eventId: body.eventId ?? null,
-      })
+      // const localImportUseCase = new StartImportUseCase()
+      // await localImportUseCase.execute({
+      //   ...body,
+      //   // eventId: body.eventId ?? null,
+      // })
 
       reply.send() // or reply with the stream
     } catch (error) {

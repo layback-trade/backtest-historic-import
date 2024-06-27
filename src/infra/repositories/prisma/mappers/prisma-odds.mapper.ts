@@ -265,10 +265,6 @@ export class OddsGapFiller {
       currentTimestamp,
     )
 
-    if(currentTimestamp.getTime() === 1715016045530) {
-      console.log("here")
-    }
-
     const MAX_GAP_IN_SECONDS = 118
 
     const odds: (OddWithMarketId & {

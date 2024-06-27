@@ -94,7 +94,7 @@ export class MarketResourcesHandler implements WorkerHandler<FullMarketFile[]> {
       )) as Market
 
       if (!market) {
-        console.log('here')
+        return
       }
 
       if (marketDefinition) {
@@ -175,9 +175,6 @@ export class MarketResourcesHandler implements WorkerHandler<FullMarketFile[]> {
       if (oddUpdate && oddUpdate.length > 0) {
         for (const { ltp, id } of oddUpdate) {
           try {
-            if(marketId === '1.227673857') {
-              console.log('here')
-            }
             await this.newTradeUseCase.execute({
               marketId: market.id,
               selection: String(

@@ -25,7 +25,7 @@ export class PrismaSelectionMapper {
       .pop()
 
       if(!lastOddBeforeInPlay) {
-        console.log('123')
+        console.log('Sem odd antes do in play')
       }
 
     return {

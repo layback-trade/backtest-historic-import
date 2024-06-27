@@ -208,9 +208,6 @@ export class DataSavingHandler implements WorkerHandler<null> {
               if(selection.marketId !== market.id) {
                 return true
               }
-              if(market.id === '1.228221023' || selection.marketId === '1.228221023') {
-                console.log("123")
-              }
               return false
             })
             odds = odds.filter((odd) => odd.marketId !== market.id)

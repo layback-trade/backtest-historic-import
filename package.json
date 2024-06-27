@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node build/infra/index.js",
+    "start": "node build/infra/http/server.js",
     "dev": "tsnd --transpile-only --respawn -r tsconfig-paths/register src/infra/http/server.ts",
     "build": "tsup src --out-dir build",
     "test": "vitest run",
