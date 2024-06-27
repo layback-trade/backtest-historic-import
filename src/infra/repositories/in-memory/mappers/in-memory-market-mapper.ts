@@ -17,10 +17,9 @@ export class InMemoryMarketMapper {
       {
         selections: market.selections,
         type: market.type,
-        status: market.status,
+        statusHistory: market.statusHistory,
         odds,
         createdAt: market.createdAt,
-        closedAt: market.closedAt,
         inPlayDate: market.inPlayDate,
         eventId: market.eventId,
       },
@@ -38,10 +37,9 @@ export class InMemoryMarketMapper {
     return {
       selections: market.selections,
       type: market.type,
-      status: market.status,
+      statusHistory: market.statusHistory,
       odds,
       inPlayDate: market.inPlayDate,
-      closedAt: market.closedAt,
       createdAt: market.createdAt,
       eventId: market.eventId,
     }

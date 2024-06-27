@@ -5,4 +5,5 @@ export interface ImportsRepository {
   findMany(): Promise<Import[]>
   save(importEntity: Import): Promise<void>
   create(importEntity: Import): Promise<void>
+  delete(id: string): Promise<void>
 }

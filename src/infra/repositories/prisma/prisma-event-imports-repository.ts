@@ -92,4 +92,12 @@ export class PrismaEventImportsRepository implements EventImportsRepository {
       )
     })
   }
+
+  async delete(id: string) {
+    await prisma.import.delete({
+      where: {
+        id,
+      },
+    })
+  }
 }

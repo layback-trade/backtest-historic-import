@@ -5,4 +5,5 @@ export interface EventImportsRepository {
   findMany(): Promise<EventImport[]>
   save(eventImport: EventImport): Promise<void>
   create(eventImport: EventImport): Promise<void>
+  delete(id: string): Promise<void>
 }

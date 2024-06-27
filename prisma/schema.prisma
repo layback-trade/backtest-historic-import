@@ -29,96 +29,95 @@ model Import {
 }
 
 model Team {
-  name              String
-  id                Int     @id
-  matchesAsAwayTeam Match[] @relation("matchAsAwayTeam")
-  matchesAsHomeTeam Match[] @relation("matchAsHomeTeam")
+  name             String
+  id               Int     @id
+  eventsAsAwayTeam Event[] @relation("eventAsAwayTeam")
+  eventsAsHomeTeam Event[] @relation("eventAsHomeTeam")
 
   @@map("teams")
 }
 
 model Competition {
-  id      Int     @id
-  name    String
-  cc      String?
-  matches Match[]
+  id        Int     @id
+  name      String
+  countryId String?
+  events    Event[]
 
   @@map("competitions")
 }
 
-model Match {
-  id                 Int         @id
-  name               String
-  scheduledStartDate DateTime    @map("scheduled_start_date")
-  firstHalfStart     DateTime?   @map("first_half_start")
-  // firstHalfEnd                                        DateTime?
-  secondHalfStart    DateTime?   @map("second_half_start")
-  // secondHalfEnd                                       DateTime?
-  homeTeamId         Int         @map("home_team_id")
-  awayTeamId         Int         @map("away_team_id")
-  competitionId      Int         @map("competition_id")
-  // homeTeamScore                                       Int
-  // awayTeamScore                                       Int
-  // homeTeamHTScore                                     Int
-  // awayTeamHTScore                                     Int
-  competition        Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
-  homeTeam           Team        @relation("matchAsHomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
-  awayTeam           Team        @relation("matchAsAwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
-  // lastteammatches_lastteammatches_eventidlastToevents lastteammatches[] @relation("lastteammatches_eventidlastToevents")
-  // lastteammatches_lastteammatches_idToevents          lastteammatches[] @relation("lastteammatches_idToevents")
-  hasStatistics      Boolean
-  markets            Market[]
-  statistics         Statistic[]
+model Event {
+  id                                                  Int               @id
+  name                                                String
+  startDate                                           DateTime
+  firstHalfStart                                      DateTime?
+  firstHalfEnd                                        DateTime?
+  secondHalfStart                                     DateTime?
+  secondHalfEnd                                       DateTime?
+  homeTeamId                                          Int
+  awayTeamId                                          Int
+  competitionId                                       Int
+  homeTeamScore                                       Int
+  awayTeamScore                                       Int
+  homeTeamHTScore                                     Int
+  awayTeamHTScore                                     Int
+  competition                                         Competition       @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  homeTeam                                            Team              @relation("eventAsHomeTeam", fields: [homeTeamId], references: [id], onDelete: Cascade)
+  awayTeam                                            Team              @relation("eventAsAwayTeam", fields: [awayTeamId], references: [id], onDelete: Cascade)
+  lastteammatches_lastteammatches_eventidlastToevents lastteammatches[] @relation("lastteammatches_eventidlastToevents")
+  lastteammatches_lastteammatches_idToevents          lastteammatches[] @relation("lastteammatches_idToevents")
+  markets                                             Market[]
+  Statistic                                           Statistic[]
 
-  @@index([scheduledStartDate])
-  @@map("matches")
+  @@index([startDate])
+  @@map("events")
 }
 
 model Market {
-  id      String @id
-  eventId Int    @map("event_id")
-  type    String
-  event   Match  @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  // selections   Selection[]
-  odds    Odd[]
+  id           String         @id
+  eventId      Int
+  type         String
+  event        Event          @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  selections   Selection[]
+  SelectionOdd SelectionOdd[]
 
   @@index([type, eventId])
   @@map("markets")
 }
 
-// model Selection {
-//   id        Int
-//   name      String
-//   market    Market   @relation(fields: [marketId], references: [id], onDelete: Cascade)
-//   marketId  String
-//   odd       Float
-//   hasInPlay Boolean? @default(false)
-//   hasAlert  Boolean? @default(false)
-
-//   operations    Operation[]
-//   selectionOdds SelectionOdd[]
-
-//   @@id([id, marketId])
-//   @@index([marketId])
-//   @@map("selections")
-// }
-
-model Odd {
-  // runnerId  Int      @map("runner_id")
-  runner    String
-  marketId  String   @map("market_id")
-  // gameTime       Int
-  // gameTimeStatus String // GameTimeStatus
+model Selection {
+  id        Int
+  name      String
+  market    Market   @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  marketId  String
   odd       Float
-  // marketStatus   String
-  createdAt DateTime @map("created_at")
-  staledAt  DateTime @map("staled_at")
+  hasInPlay Boolean? @default(false)
+  hasAlert  Boolean? @default(false)
 
-  // selection Selection @relation(fields: [runnerId, marketId], references: [id, marketId], onDelete: Cascade)
-  market Market @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  selectionOdds SelectionOdd[]
 
-  @@id([runner, marketId, createdAt])
-  @@map("odds")
+  @@id([id, marketId])
+  @@index([marketId])
+  @@map("selections")
+}
+
+model SelectionOdd {
+  selectionId    Int
+  marketId       String
+  gameTime       Int
+  gameTimeStatus String
+  gameTimePeriod Float
+  isArtificial   Boolean
+  odd            Float
+  marketStatus   String
+  createdAt      DateTime?
+  staledAt       DateTime
+
+  selection Selection @relation(fields: [selectionId, marketId], references: [id, marketId], onDelete: Cascade)
+  market    Market    @relation(fields: [marketId], references: [id], onDelete: Cascade)
+
+  @@id([selectionId, marketId, gameTime, gameTimeStatus])
+  @@map("selections_odd")
 }
 
 // enum GameTimeStatus {
@@ -129,25 +128,26 @@ model Odd {
 // }
 
 model Statistic {
-  matchId           Int           @map("match_id")
-  type              StatisticType // StatisticType
-  // gameTime          Int
-  // gameTimeStatus    String
-  teamSide          String        @map("team_side") // home or away 
+  eventId           Int
+  type              String // StatisticType
+  gameTime          Int
+  gameTimeStatus    String
+  gameTimePeriod    Int?
+  status            String?
+  teamSide          String // home or away 
   value             Int
-  oppositeSideValue Int           @map("opposite_side_value")
-  // originalGameTime  Int
-  createdAt         DateTime      @map("created_at")
-  staledAt          DateTime      @map("staled_at")
+  oppositeSideValue Int
+  originalGameTime  Int
+  createdAt         DateTime
+  staledAt          DateTime?
 
-  match Match @relation(fields: [matchId], references: [id])
+  event Event @relation(fields: [eventId], references: [id])
 
-  @@id([matchId, type, createdAt, teamSide])
-  @@map("statistics")
+  @@id([eventId, type, gameTime, gameTimeStatus, teamSide])
 }
 
 enum StatisticType {
-  GOALS
+  GOAL
   POSSESSION
   ATTACK
   CORNER
@@ -156,7 +156,20 @@ enum StatisticType {
   PENALTY
   RED_CARD
   YELLOW_CARD
-  SHOT
+  // SHOT
   SHOT_ON_TARGET
   SHOT_OFF_TARGET
+}
+
+model lastteammatches {
+  id                                         Int
+  eventidlast                                Int
+  id_mesmo_mando                             String @db.Char(1)
+  id_mesma_competicao                        String @db.Char(1)
+  qt_jogo_passado_casa                       Int
+  qt_jogo_passado_fora                       Int
+  events_lastteammatches_eventidlastToevents Event  @relation("lastteammatches_eventidlastToevents", fields: [eventidlast], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  events_lastteammatches_idToevents          Event  @relation("lastteammatches_idToevents", fields: [id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@id([id, eventidlast])
 }

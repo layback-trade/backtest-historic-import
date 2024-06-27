@@ -3,7 +3,7 @@ import { isBefore, isFuture } from 'date-fns'
 export type TeamSide = 'home' | 'away'
 
 export type StatisticType =
-  | 'GOALS'
+  | 'GOAL'
   | 'POSSESSION'
   | 'ATTACK'
   | 'CORNER'
@@ -15,6 +15,21 @@ export type StatisticType =
   | 'SHOT'
   | 'SHOT_ON_TARGET'
   | 'SHOT_OFF_TARGET'
+
+export enum StatisticTypeEnum {
+  GOAL = 'GOAL',
+  POSSESSION = 'POSSESSION',
+  ATTACK = 'ATTACK',
+  CORNER = 'CORNER',
+  DANGEROUS_ATTACK = 'DANGEROUS_ATTACK',
+  SUBSTITUTION = 'SUBSTITUTION',
+  PENALTY = 'PENALTY',
+  RED_CARD = 'RED_CARD',
+  YELLOW_CARD = 'YELLOW_CARD',
+  SHOT = 'SHOT',
+  SHOT_ON_TARGET = 'SHOT_ON_TARGET',
+  SHOT_OFF_TARGET = 'SHOT_OFF_TARGET',
+}
 
 interface StatisticProps {
   teamSide: TeamSide
@@ -35,7 +50,7 @@ export class Statistic {
     }
 
     const isValueInteger = value % 1 === 0
-    if (!isValueInteger || value <= 0) {
+    if (!isValueInteger || value < 0) {
       throw new Error('Invalid statistic value')
     }
 

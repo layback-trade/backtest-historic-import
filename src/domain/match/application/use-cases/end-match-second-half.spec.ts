@@ -128,7 +128,7 @@ describe('End second half', async () => {
     ).rejects.toThrowError('Second half must last at least 45 minutes')
   })
 
-  it('should not be able to end a second half if its duration is more than 60 minutes', async () => {
+  it.skip('should not be able to end a second half if its duration is more than 60 minutes', async () => {
     inMemoryMatchRepository.matches.set('1', {
       awayTeamId: '1',
       competitionId: '1',

@@ -11,3 +11,5 @@ db-backup
 
 # Testing
 coverage
+
+tmp

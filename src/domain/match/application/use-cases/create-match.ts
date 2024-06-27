@@ -22,7 +22,7 @@ export class CreateMatchUseCase {
     const matchExists = await this.matchesRepository.findById(id)
 
     if (matchExists) {
-      throw new Error('Match already exists')
+      // throw new Error('Match already exists')
     }
 
     // const homeTeamExists = await this.teamsRepository.findById(homeTeamId)

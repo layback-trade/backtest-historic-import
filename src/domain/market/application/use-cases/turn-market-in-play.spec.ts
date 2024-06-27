@@ -1,4 +1,6 @@
 import { InMemoryMarketsRepository } from '@/infra/repositories/in-memory/in-memory-markets-repository'
+import { MarketStatus } from '../../enterprise/entities/value-objects/market-status'
+import { Selection } from '../../enterprise/entities/value-objects/selection'
 import { MarketAlreadyClosedError } from '../../enterprise/errors/market-already-closed-error'
 import { TurnMarketInPlayUseCase } from './turn-market-in-play'
 
@@ -13,10 +15,16 @@ describe('Turn market in play', async () => {
 
   it('should be able to turn a market in play', async () => {
     inMemoryMarketsRepository.markets.set('1', {
-      selections: ['team 1', 'team 2', 'The Draw'],
+      selections: [
+        new Selection('1', 'team 1'),
+        new Selection('2', 'team 2'),
+        new Selection('3', 'The Draw'),
+      ],
       type: 'MATCH_ODDS',
       eventId: '1',
-      status: 'OPEN',
+      statusHistory: [
+        new MarketStatus('OPEN', new Date('2022-04-23T12:00:00Z')),
+      ],
       createdAt: new Date('2022-04-23T12:00:00Z'),
       odds: [],
     })
@@ -33,12 +41,18 @@ describe('Turn market in play', async () => {
 
   it('should not be able to turn a market in play if it is already closed', async () => {
     inMemoryMarketsRepository.markets.set('1', {
-      selections: ['team 1', 'team 2', 'The Draw'],
+      selections: [
+        new Selection('1', 'team 1'),
+        new Selection('2', 'team 2'),
+        new Selection('3', 'The Draw'),
+      ],
       type: 'MATCH_ODDS',
-      status: 'OPEN',
+      statusHistory: [
+        new MarketStatus('OPEN', new Date('2022-04-23T12:00:00Z')),
+        new MarketStatus('CLOSED', new Date('2022-04-23T20:00:00Z')),
+      ],
       eventId: '1',
       createdAt: new Date('2022-04-23T12:00:00Z'),
-      closedAt: new Date('2022-04-23T20:00:00Z'),
       odds: [],
     })
 
@@ -52,10 +66,16 @@ describe('Turn market in play', async () => {
 
   it('should not be able to turn a market in play if the time is before the market creation', async () => {
     inMemoryMarketsRepository.markets.set('1', {
-      selections: ['team 1', 'team 2', 'The Draw'],
+      selections: [
+        new Selection('1', 'team 1'),
+        new Selection('2', 'team 2'),
+        new Selection('3', 'The Draw'),
+      ],
       eventId: '1',
       type: 'MATCH_ODDS',
-      status: 'OPEN',
+      statusHistory: [
+        new MarketStatus('OPEN', new Date('2022-04-23T12:00:00Z')),
+      ],
       createdAt: new Date('2022-04-23T12:00:00Z'),
       odds: [],
     })

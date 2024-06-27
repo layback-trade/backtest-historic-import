@@ -36,7 +36,9 @@ export class StartRemoteEventImportUseCase {
     )
 
     return new Promise((resolve, reject) => {
+      let dataReceivedCount = 0
       stream.on('entry', async function (header, stream, next) {
+        dataReceivedCount++
         const marketDataJSON =
           await BZ2Reader.convertToString<FullMarketFile>(stream)
 
@@ -44,9 +46,12 @@ export class StartRemoteEventImportUseCase {
         next()
       })
 
-      stream.on('finish', () => {
+      stream.on('finish', async () => {
         resolve(eventImport)
-        console.log('Stream finished')
+        console.log('Finish', dataReceivedCount)
+        if (dataReceivedCount === 0) {
+          await this.eventImportsRepository.delete(eventImport.id)
+        }
       })
       stream.on('error', (err) => {
         console.log(err)

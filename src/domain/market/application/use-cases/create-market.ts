@@ -1,5 +1,6 @@
 import { ConflictError } from '@/core/errors/conflict-error'
 import { Market, MarketType } from '../../enterprise/entities/market'
+import { Selection } from '../../enterprise/entities/value-objects/selection'
 import { EventsRepository } from '../repositories/events-repository'
 import { MarketsRepository } from '../repositories/markets-repository'
 
@@ -7,7 +8,7 @@ interface CreateMarketUseCaseProps {
   eventId: string
   type: MarketType
   createdAt: Date
-  selections: string[]
+  selections: Selection[]
   marketId: string
 }
 

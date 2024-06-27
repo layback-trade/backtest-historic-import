@@ -28,7 +28,7 @@ export class DiscordAlert {
       //   username,
       //   avatar_url: avatarUrl,
       // })
-      console.log('Erro enviado')
+      console.log('Erro enviado: ', message)
     } catch (error: unknown) {
       console.log(error)
     }

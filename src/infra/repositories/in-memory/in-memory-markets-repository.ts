@@ -1,18 +1,17 @@
 import { MarketsRepository } from '@/domain/market/application/repositories/markets-repository'
-import {
-  Market,
-  MarketStatus,
-  MarketType,
-} from '@/domain/market/enterprise/entities/market'
+import { Market, MarketType } from '@/domain/market/enterprise/entities/market'
+import { MarketStatusType } from '@/domain/market/enterprise/entities/value-objects/market-status'
 import { InMemoryMarketMapper } from './mappers/in-memory-market-mapper'
 
 export interface InMemoryPersistenceMarket {
-  selections: string[]
+  selections: { name: string; id: string }[]
   type: MarketType
-  status: MarketStatus
+  statusHistory: {
+    name: MarketStatusType
+    timestamp: Date
+  }[]
   createdAt: Date
   inPlayDate?: Date
-  closedAt?: Date
   eventId: string
   odds: {
     value: number
@@ -28,6 +27,13 @@ export class InMemoryMarketsRepository implements MarketsRepository {
     const marketInMemory = InMemoryMarketMapper.toMemory(market)
 
     this.markets.set(market.id, marketInMemory)
+  }
+
+  async createMany(markets: Market[]): Promise<void> {
+    markets.forEach((market) => {
+      const marketInMemory = InMemoryMarketMapper.toMemory(market)
+      this.markets.set(market.id, marketInMemory)
+    })
   }
 
   async save(market: Market): Promise<void> {

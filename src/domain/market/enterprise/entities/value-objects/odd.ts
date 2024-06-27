@@ -8,9 +8,9 @@ interface OddProps {
 }
 
 export class Odd {
-  public readonly value: number
-  public readonly timestamp: Date
-  public readonly selection: string
+  private readonly _value: number
+  private readonly _timestamp: Date
+  private readonly _selection: string
 
   constructor({ value, timestamp, selection }: OddProps) {
     if (!odds.includes(value)) {
@@ -21,8 +21,20 @@ export class Odd {
       throw new Error('Invalid odd timestamp')
     }
 
-    this.value = value
-    this.timestamp = timestamp
-    this.selection = selection
+    this._value = value
+    this._timestamp = timestamp
+    this._selection = selection
+  }
+
+  get value() {
+    return this._value
+  }
+
+  get timestamp() {
+    return this._timestamp
+  }
+
+  get selection() {
+    return this._selection
   }
 }

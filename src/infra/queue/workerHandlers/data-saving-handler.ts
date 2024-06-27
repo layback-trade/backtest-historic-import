@@ -5,15 +5,19 @@ import {
   inMemoryMatchesRepository,
   inMemoryTeamsRepository,
 } from '@/infra/http/make-instances'
+import { PgCopyOdds } from '@/infra/repositories/pg/pg-markets-repository'
+import { PrismaMatchMapper } from '@/infra/repositories/prisma/mappers/prisma-match-mapper'
+import { OddsSuspender, PrismaOddsMapper } from '@/infra/repositories/prisma/mappers/prisma-odds.mapper'
+import { PrismaSelectionMapper } from '@/infra/repositories/prisma/mappers/prisma-selections-mapper'
 import {
+  Event,
+  Market,
   PrismaClient,
   Competition as PrismaCompetition,
-  Market as PrismaMarket,
-  Match as PrismaMatch,
-  Odd as PrismaOdd,
   Statistic as PrismaStatistic,
   Team as PrismaTeam,
-  StatisticType,
+  Selection,
+  SelectionOdd,
 } from '@prisma/client'
 import { WorkerHandler } from '../interfaces/worker-handler'
 
@@ -23,111 +27,159 @@ export class DataSavingHandler implements WorkerHandler<null> {
   constructor(/* repositories */) {}
 
   async process() {
-    const competitions: PrismaCompetition[] = Array.from(
-      inMemoryCompetitionsRepository.competitions.entries(),
-    ).map(([id, competition]) => ({
-      id: Number(id),
-      cc: competition.cc ?? null,
-      name: competition.name,
-    }))
+    // *** Formatting ***
 
-    const teams: PrismaTeam[] = Array.from(
-      inMemoryTeamsRepository.teams.entries(),
-    ).map(([id, team]) => ({
-      id: Number(id),
-      name: team.name,
-    }))
+    const competitions: PrismaCompetition[] = []
+    const teams: PrismaTeam[] = []
 
-    const statistics: PrismaStatistic[] = []
-    const odds: PrismaOdd[] = []
+    inMemoryCompetitionsRepository.competitions.forEach((competition, id) => {
+      competitions.push({
+        id: Number(id),
+        countryId: null,
+        name: competition.name,
+      })
+    })
 
-    const matches: PrismaMatch[] = Array.from(
-      inMemoryMatchesRepository.matches.entries(),
-    ).map(([id, match]) => {
+    inMemoryTeamsRepository.teams.forEach((team, id) => {
+      teams.push({
+        id: Number(id),
+        name: team.name,
+      })
+    })
+
+    let statistics: PrismaStatistic[] = []
+    const matches: Event[] = []
+
+    inMemoryMatchesRepository.matches.forEach((inMemoryMatch, id) => {
       const event = inMemoryEventsRepository.events.get(id)!
 
-      const statisticsToPersistence = match.statistics
-        .filter((stat) =>
-          Object.values(StatisticType).includes(stat.type as StatisticType),
-        )
-        .map((stat) => {
-          // get the opposite side value
-          const oppositeSideStats = match.statistics.filter(
-            (s) =>
-              s.teamSide !== stat.teamSide &&
-              s.type === stat.type &&
-              s.timestamp < stat.timestamp,
-          )
-          // get staledAt time
-          const nextStat = match.statistics.find(
-            (s) =>
-              s.teamSide === stat.teamSide &&
-              s.type === stat.type &&
-              s.timestamp > stat.timestamp,
-          )
-          return {
-            teamSide: stat.teamSide,
-            createdAt: stat.timestamp,
-            type: stat.type,
-            value: stat.value,
-            oppositeSideValue:
-              oppositeSideStats.at(-1)?.value ?? stat.type === 'POSSESSION'
-                ? 100 - stat.value
-                : 0,
-            staledAt: nextStat?.timestamp ?? new Date('2050-01-01'),
-            matchId: Number(id),
-          }
-        })
+      if (!event) {
+        console.log('Sem evento', { matchId: id })
+        throw new Error('Sem evento')
+      }
 
-      statistics.push(...statisticsToPersistence)
+      if (!inMemoryMatch.secondHalfStart || !inMemoryMatch.firstHalfEnd) {
+        // '33238130', '33239449'
+        console.log('Sem first half end ou second half start', {
+          match: inMemoryMatch,
+        })
+        return null
+      }
+
+      const { match, statistics: statisticsFormatted } = PrismaMatchMapper.toPersistence({
+        match: {
+          ...inMemoryMatch,
+          id,
+          secondHalfStart: inMemoryMatch.secondHalfStart!,
+          firstHalfEnd: inMemoryMatch.firstHalfEnd!,
+        },
+        event,
+      })
 
       inMemoryMatchesRepository.matches.delete(String(id))
       inMemoryEventsRepository.events.delete(String(id))
-      return {
-        id: Number(id),
-        name: event.name,
-        scheduledStartDate: event.scheduledStartDate,
-        awayTeamId: Number(match.awayTeamId),
-        competitionId: Number(match.competitionId),
-        firstHalfStart: match.firstHalfStart,
-        homeTeamId: Number(match.homeTeamId),
-        hasStatistics: match.statistics.length > 0,
-        // firstHalfEnd: match.firstHalfEnd,
-        secondHalfStart: match.secondHalfStart ?? null,
-        // secondHalfEnd: match.secondHalfEnd,
+
+      statistics.push(...statisticsFormatted)
+      matches.push(match)
+    })
+
+    let marketsWithMatches: Market[] = []
+    let odds: SelectionOdd[] = []
+    let selections: Selection[] = []
+
+    inMemoryMarketsRepository.markets.forEach((market) => {
+      const match = matches.find((m) => m.id === Number(market.eventId))
+      const matchIndex = matches.findIndex(
+        (m) => m.id === Number(market.eventId),
+      )
+      if (!match) {
+        return null
+      }
+
+      if (market.statusHistory.at(-1)!.name !== 'CLOSED') {
+        matches.splice(matchIndex, 1)
+        return null
+      }
+
+      if (
+        market.type === 'HALF_TIME'
+        // market.statusHistory.at(-1)!.timestamp > match.firstHalfEnd!
+      ) {
+        match.firstHalfEnd = market.statusHistory.at(-1)!.timestamp
+      }
+
+      if (market.type === 'MATCH_ODDS') {
+          match.firstHalfStart = market.inPlayDate ?? match.firstHalfStart!
+        if (market.statusHistory.at(-1)!.timestamp > match.secondHalfEnd!) {
+          match.secondHalfEnd = market.statusHistory.at(-1)!.timestamp
+        }
+
+        const home = market.selections[0]
+        const away = market.selections[1]
+        if(!home || !away) {
+          console.log('Sem home ou away', { market })
+          return null
+        }
+        
+        teams.push(
+          { id: Number(home.id), name: home.name },
+          { id: Number(away.id), name: away.name },
+        )
+        matches.splice(matchIndex, 1, {
+          ...match,
+          homeTeamId: Number(home.id),
+          awayTeamId: Number(away.id),
+        })
       }
     })
 
-    const markets: PrismaMarket[] = Array.from(
-      inMemoryMarketsRepository.markets,
-    )
-      .filter(([, market]) =>
-        matches.some((m) => m.id === Number(market.eventId)),
+    inMemoryMarketsRepository.markets.forEach((market, marketId) => {
+      const match = matches.find((m) => m.id === Number(market.eventId))
+      if (!match) {
+        return null
+      }
+      
+      const oddsMapper = new PrismaOddsMapper(
+        market.odds.map((odd) => ({ ...odd, marketId })),
+        {
+          firstHalfStart: match.firstHalfStart!,
+          firstHalfEnd: match.firstHalfEnd!,
+          secondHalfStart: match.secondHalfStart!,
+        },
       )
-      .map(([marketId, market]) => {
-        const oddsToPersistence = market.odds.map((odd) => {
-          const nextOdd = market.odds.find(
-            (o) => o.selection === odd.selection && o.timestamp > odd.timestamp,
-          )
 
-          const oddFormatted: PrismaOdd = {
-            odd: odd.value,
-            createdAt: odd.timestamp,
-            marketId,
-            runner: odd.selection,
-            staledAt: nextOdd?.timestamp ?? new Date('2050-01-01'),
-          }
-          return oddFormatted
-        })
-        odds.push(...oddsToPersistence)
-        inMemoryMarketsRepository.markets.delete(marketId)
+      const oddsWithPersistedFormat = oddsMapper.toPersistence(
+        market.statusHistory.at(-1)!.timestamp,
+      )
 
-        return {
-          eventId: Number(market.eventId),
-          id: marketId,
-          type: market.type,
-        }
+      const oddsSuspender = new OddsSuspender(
+        market,
+        statistics.filter(statistic => statistic.eventId === Number(market.eventId) && statistic.type === 'GOAL'),
+        oddsWithPersistedFormat,
+      )
+
+      const oddsWithSuspensions =  oddsSuspender.invalidateAll()
+      
+      odds.push(...oddsWithSuspensions)
+      
+      const marketSelections: Selection[] = market.selections.map((selection) =>
+      PrismaSelectionMapper.toPersistence({
+        odds: oddsWithPersistedFormat,
+          selection,
+          marketId,
+        }),
+      )
+
+      selections.push(...marketSelections)
+
+      marketsWithMatches.push({
+        id: marketId,
+        eventId: Number(market.eventId),
+        type: market.type,
       })
+    })
+
+    // *** Saving ***
 
     if (competitions.length || teams.length) {
       await Promise.all([
@@ -142,29 +194,56 @@ export class DataSavingHandler implements WorkerHandler<null> {
       ])
     }
 
+    const matchesFiltered = matches.filter(
+      (match) => {
+        if(teams.some((team) => team.id === match.homeTeamId) &&
+          teams.some((team) => team.id === match.awayTeamId)) {
+          return true
+        } else {
+          marketsWithMatches = marketsWithMatches.filter((market) => {
+            if(market.eventId !== match.id) {
+              return true
+            }
+            selections = selections.filter((selection) => {
+              if(selection.marketId !== market.id) {
+                return true
+              }
+              if(market.id === '1.228221023' || selection.marketId === '1.228221023') {
+                console.log("123")
+              }
+              return false
+            })
+            odds = odds.filter((odd) => odd.marketId !== market.id)
+            return false
+          })
+          return false
+        }
+      }
+    )
+
     let matchesAdded = 0
     // Aggregate
+    console.time("Salvando Dados que não são odds")
     await prisma.$transaction(
       async (tx) => {
-        const response = await tx.match.createMany({
-          data: matches,
+        const result = await tx.event.createMany({
+          data: matchesFiltered,
           skipDuplicates: true,
         })
-
-        matchesAdded = response.count
+        matchesAdded = result.count
 
         await tx.market.createMany({
-          data: markets,
+          data: marketsWithMatches,
           skipDuplicates: true,
         })
 
         await Promise.all([
-          tx.statistic.createMany({
-            data: statistics,
+          tx.selection.createMany({
+            data: selections,
             skipDuplicates: true,
           }),
-          tx.odd.createMany({
-            data: odds,
+          tx.statistic.createMany({
+            data: statistics.filter(statistic => matchesFiltered.some(match => match.id === statistic.eventId)),
             skipDuplicates: true,
           }),
         ])
@@ -174,6 +253,11 @@ export class DataSavingHandler implements WorkerHandler<null> {
         maxWait: 1000 * 60 * 5,
       },
     )
+    console.timeEnd("Salvando Dados que não são odds")
+
+    console.time("Salvando odds")
+    await PgCopyOdds.save(odds.filter((odd) => odd.gameTime >= -10))
+    console.timeEnd("Salvando odds")
 
     return { matchesAdded }
   }

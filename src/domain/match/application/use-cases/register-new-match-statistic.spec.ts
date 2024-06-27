@@ -23,7 +23,7 @@ describe('Register match new statistic', () => {
       matchId: '1',
       timestamp: new Date('2022-01-01T00:30:00Z'), // During the first half
       teamSide: 'home',
-      type: 'GOALS',
+      type: 'GOAL',
       value: 1,
     })
 
@@ -33,7 +33,7 @@ describe('Register match new statistic', () => {
       expect.objectContaining({
         teamSide: 'home',
         timestamp: new Date('2022-01-01T00:30:00Z'),
-        type: 'GOALS',
+        type: 'GOAL',
         value: 1,
       }),
     )
@@ -45,7 +45,7 @@ describe('Register match new statistic', () => {
         matchId: 'nonexistent',
         timestamp: new Date(),
         teamSide: 'home',
-        type: 'GOALS',
+        type: 'GOAL',
         value: 1,
       }),
     ).rejects.toThrow('Match not found')
@@ -65,7 +65,7 @@ describe('Register match new statistic', () => {
         matchId: '1',
         timestamp: new Date('2022-01-01T00:00:00Z'), // Before the match starts
         teamSide: 'home',
-        type: 'GOALS',
+        type: 'GOAL',
         value: 1,
       }),
     ).rejects.toThrow('Statistic cannot be registered before the match starts')
@@ -86,7 +86,7 @@ describe('Register match new statistic', () => {
         matchId: '1',
         timestamp: new Date('2022-01-01T00:50:00Z'), // During the interval
         teamSide: 'home',
-        type: 'GOALS',
+        type: 'GOAL',
         value: 1,
       }),
     ).rejects.toThrow('Statistic cannot be registered during the interval')
@@ -108,7 +108,7 @@ describe('Register match new statistic', () => {
         matchId: '1',
         timestamp: new Date('2022-01-01T00:55:00Z'), // Before the second half starts
         teamSide: 'home',
-        type: 'GOALS',
+        type: 'GOAL',
         value: 1,
       }),
     ).rejects.toThrow(
@@ -133,7 +133,7 @@ describe('Register match new statistic', () => {
         matchId: '1',
         timestamp: new Date('2022-01-01T02:00:00Z'), // After the second half end
         teamSide: 'home',
-        type: 'GOALS',
+        type: 'GOAL',
         value: 1,
       }),
     ).rejects.toThrow(
@@ -153,7 +153,7 @@ describe('Register match new statistic', () => {
         {
           teamSide: 'home',
           timestamp: new Date('2022-01-01T01:10:00Z'),
-          type: 'GOALS',
+          type: 'GOAL',
           value: 1,
         },
       ],
@@ -164,7 +164,7 @@ describe('Register match new statistic', () => {
         matchId: '1',
         timestamp: new Date('2022-01-01T01:10:30Z'), // Less than 1 minute difference
         teamSide: 'home',
-        type: 'GOALS',
+        type: 'GOAL',
         value: 1,
       }),
     ).rejects.toThrow(

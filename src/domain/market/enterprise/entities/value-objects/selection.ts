@@ -1,26 +1,46 @@
-import { isBefore, isFuture } from 'date-fns'
-
-interface SelectionProps {
-  id: string
-  selection: string
-}
+export const defaultSelectionsById = {
+  1: '0 - 0',
+  2: '1 - 0',
+  3: '1 - 1',
+  4: '0 - 1',
+  5: '2 - 0',
+  6: '2 - 1',
+  7: '2 - 2',
+  8: '1 - 2',
+  9: '0 - 2',
+  10: '3 - 0',
+  11: '3 - 1',
+  12: '3 - 2',
+  13: '3 - 3',
+  14: '2 - 3',
+  15: '1 - 3',
+  16: '0 - 3',
+  9063254: 'Any Other Home Win',
+  9063255: 'Any Other Away Win',
+  9063256: 'Any Other Draw',
+  30246: 'Yes',
+  110503: 'No',
+  47972: 'Under 2.5 Goals',
+  47973: 'Over 2.5 Goals',
+  1221385: 'Under 1.5 Goals',
+  1221386: 'Over 1.5 Goals',
+  1222344: 'Under 3.5 Goals',
+  1222345: 'Over 3.5 Goals',
+  1222346: 'Over 4.5 Goals',
+  1222347: 'Under 4.5 Goals',
+  1485567: 'Under 5.5 Goals',
+  1485568: 'Over 5.5 Goals',
+  2542448: 'Under 6.5 Goals',
+  2542449: 'Over 6.5 Goals',
+  5851482: 'Under 0.5 Goals',
+  5851483: 'Over 0.5 Goals',
+  58805: 'The Draw',
+  2004841: 'The Draw (HT)',
+} as const
 
 export class Selection {
-  public readonly value: number
-  public readonly timestamp: Date
-  public readonly selection: string
-
-  constructor({ value, timestamp, selection }: SelectionProps) {
-    if (!selections.includes(value)) {
-      throw new Error('Invalid selection value')
-    }
-
-    if (isFuture(timestamp) || isBefore(timestamp, '2020-01-01')) {
-      throw new Error('Invalid selection timestamp')
-    }
-
-    this.value = value
-    this.timestamp = timestamp
-    this.selection = selection
-  }
+  constructor(
+    public readonly id: string,
+    public readonly name: string,
+  ) {}
 }

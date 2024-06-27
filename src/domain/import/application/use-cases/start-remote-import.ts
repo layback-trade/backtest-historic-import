@@ -1,6 +1,7 @@
 import { publisher } from '@/infra/http/server'
 import { FullMarketFile } from '@/infra/queue/workerHandlers/market-resources-handler'
 import { BZ2Reader } from '@/infra/reader/bz2-reader'
+import { addDays } from 'date-fns'
 import { Import } from '../../enterprise/entities/import'
 import { Period } from '../../enterprise/entities/value-objects/period'
 import { ImportsRepository } from '../repositories/imports-repository'
@@ -21,7 +22,7 @@ export class StartRemoteImportUseCase {
     endDate,
     startDate,
   }: StartRemoteImportUseCaseProps): Promise<Import> {
-    const period = new Period(startDate, endDate)
+    const period = new Period(startDate, addDays(endDate, 1))
 
     const importEntity = new Import({
       period,
@@ -33,7 +34,9 @@ export class StartRemoteImportUseCase {
 
     const stream = await this.dataVendor.getDataStream(period)
     return new Promise((resolve, reject) => {
+      let dataReceivedCount = 0
       stream.on('entry', async function (header, stream, next) {
+        dataReceivedCount++
         const marketDataJSON =
           await BZ2Reader.convertToString<FullMarketFile>(stream)
 
@@ -41,9 +44,12 @@ export class StartRemoteImportUseCase {
         next()
       })
 
-      stream.on('finish', () => {
+      stream.on('finish', async () => {
         resolve(importEntity)
-        console.log('Stream finished')
+        console.log('Finish', dataReceivedCount)
+        if (dataReceivedCount === 0) {
+          await this.importsRepository.delete(importEntity.id)
+        }
       })
       stream.on('error', (err) => {
         console.log(err)

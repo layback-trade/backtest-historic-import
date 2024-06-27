@@ -11,7 +11,7 @@ export class PrismaMatchesRepository implements MatchesRepository {
   async create() {}
 
   async count() {
-    const count = await prisma.match.count()
+    const count = await prisma.event.count()
     return count
   }
 }

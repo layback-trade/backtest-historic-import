@@ -2,12 +2,13 @@ import { Optional } from '@/core/type-utils'
 import { addMinutes, isAfter, isBefore } from 'date-fns'
 import { Entity } from '../../../../core/entity'
 import { MarketAlreadyClosedError } from '../errors/market-already-closed-error'
-import { MarketSuspendedError } from '../errors/market-suspended-error'
+import { MarketStatusAlreadyDefinedError } from '../errors/market-status-already-defined-error'
 import { MarketWithoutInPlayDateError } from '../errors/market-without-in-play-date-error'
 import { MarketWithoutOddsError } from '../errors/market-without-odds-error'
+import { MarketStatus, MarketStatusType } from './value-objects/market-status'
 import { Odd } from './value-objects/odd'
+import { Selection } from './value-objects/selection'
 
-export type MarketStatus = 'OPEN' | 'SUSPENDED' | 'CLOSED' // precisa ter o closed mesmo?
 export type MarketType =
   | 'MATCH_ODDS'
   | 'CORRECT_SCORE'
@@ -25,39 +26,42 @@ export type MarketType =
 
 interface MarketProps {
   type: MarketType
-  selections: string[]
+  selections: Selection[]
   odds: Odd[]
   createdAt: Date
   inPlayDate?: Date
-  closedAt?: Date
-  status: MarketStatus // Times,
+  statusHistory: MarketStatus[]
   eventId: string
 }
 
 export class Market extends Entity<MarketProps> {
   constructor(
-    props: Optional<MarketProps, 'odds' | 'inPlayDate' | 'closedAt' | 'status'>,
+    props: Optional<MarketProps, 'odds' | 'inPlayDate' | 'statusHistory'>,
     id: string,
   ) {
-    // validation with selections
-    if (props.type === 'OVER_UNDER_05') {
-      if (
-        JSON.stringify(props.selections) !==
-        JSON.stringify(['Under 0.5 Goals', 'Over 0.5 Goals'])
-      ) {
-        throw new Error('Invalid selections')
-      }
-    }
-    if (props.type === 'MATCH_ODDS' || props.type === 'HALF_TIME') {
-      if (
-        props.selections.length !== 3 ||
-        (!props.selections.some((selection) => selection === 'The Draw') &&
-          !props.selections.some((selection) => selection === 'The Draw (HT)'))
-      ) {
-        throw new Error('Invalid selections')
-      }
-    }
-    super({ odds: [], status: 'OPEN', ...props }, id)
+    // // validation with selections
+    // if (props.type === 'OVER_UNDER_05') {
+    //   if (
+    //     JSON.stringify(props.selections.map((selection) => selection.name)) !==
+    //     JSON.stringify(['Under 0.5 Goals', 'Over 0.5 Goals'])
+    //   ) {
+    //     throw new Error('Invalid selections')
+    //   }
+    // }
+    // if (props.type === 'MATCH_ODDS' || props.type === 'HALF_TIME') {
+    //   if (
+    //     props.selections.length !== 3 ||
+    //     (!props.selections.some((selection) => selection.name === 'The Draw') &&
+    //       !props.selections.some(
+    //         (selection) => selection.name === 'The Draw (HT)',
+    //       ))
+    //   ) {
+    //     throw new Error('Invalid selections')
+    //   }
+    // }
+
+    const defaultStatus = new MarketStatus('OPEN', props.createdAt)
+    super({ odds: [], statusHistory: [defaultStatus], ...props }, id)
   }
 
   get type() {
@@ -69,7 +73,22 @@ export class Market extends Entity<MarketProps> {
   }
 
   get status() {
-    return this.props.status
+    return this.props.statusHistory.at(-1)!.name
+  }
+
+  get statusHistory() {
+    return this.props.statusHistory
+  }
+
+  get suspendedTimes() {
+    return this.statusHistory
+      .filter((status) => status.name === 'SUSPENDED')
+      .map((status) => ({
+        startedAt: status.timestamp,
+        finishedAt: this.statusHistory
+          .slice(this.statusHistory.indexOf(status) + 1)
+          .find((status) => status.name !== 'SUSPENDED')!.timestamp,
+      }))
   }
 
   get createdAt() {
@@ -77,7 +96,11 @@ export class Market extends Entity<MarketProps> {
   }
 
   get closedAt() {
-    return this.props.closedAt
+    return this.isClosed ? this.statusHistory.at(-1)!.timestamp : null
+  }
+
+  get isClosed() {
+    return this.status === 'CLOSED'
   }
 
   get inPlayDate() {
@@ -92,16 +115,16 @@ export class Market extends Entity<MarketProps> {
     return this.props.selections
   }
 
-  get isClosed() {
-    return this.props.status === 'CLOSED'
+  get selectionsIds() {
+    return this.props.selections.map((selection) => selection.id)
   }
 
   trade(odd: Odd) {
-    if (this.props.closedAt) {
+    if (this.isClosed) {
       throw new MarketAlreadyClosedError()
     }
-    if (!this.props.selections.includes(odd.selection)) {
-      throw new Error('Selection not belongs to this market')
+    if (!this.selectionsIds.includes(odd.selection)) {
+      throw new Error('Selection does not belong to this market')
     }
     if (isBefore(odd.timestamp, this.createdAt)) {
       throw new Error('Invalid odd time')
@@ -110,25 +133,26 @@ export class Market extends Entity<MarketProps> {
   }
 
   turnInPlay(time: Date) {
-    if (this.props.closedAt) {
+    if (this.isClosed) {
       throw new MarketAlreadyClosedError()
     }
     if (isBefore(time, this.createdAt)) {
       throw new Error('Invalid inPlay time')
     }
+    const selectionsWithoutPreliveOdd = this.props.selections.filter((selection) =>
+      !this.props.odds.some((odd) => odd.selection === selection.id),
+    )
+    selectionsWithoutPreliveOdd.forEach((selection) => {
+      this.props.selections = this.props.selections.filter((selection1) => selection1.id !== selection.id)
+    })
+    // if (!hasOddsForAllSelections) {
+    //   // throw new MarketWithoutPreliveOddsError()
+    // }
     this.props.inPlayDate = time
   }
 
   doesMarketClosedWithoutInPlay() {
-    return this.props.closedAt && !this.props.inPlayDate
-  }
-
-  doesMarketHasOddsPreInPlay() {
-    if (!this.props.inPlayDate) {
-      return this.props.odds.length > 0
-    }
-    const inPlayDate = this.props.inPlayDate
-    return this.props.odds.some((odd) => isBefore(odd.timestamp, inPlayDate))
+    return this.isClosed && !this.props.inPlayDate
   }
 
   doesMarketHasOddsInPlay() {
@@ -139,41 +163,17 @@ export class Market extends Entity<MarketProps> {
     return this.props.odds.some((odd) => isAfter(odd.timestamp, inPlayDate))
   }
 
-  suspend() {
-    // if (isBefore(time, this.createdAt)) {
-    //   throw new Error('Invalid suspending time')
-    // }
-    if (this.props.status === 'CLOSED') {
-      throw new MarketAlreadyClosedError()
-    }
-
-    if (this.props.status === 'SUSPENDED') {
-      throw new MarketSuspendedError()
-    }
-
-    this.props.status = 'SUSPENDED'
+  suspend(time: Date) {
+    this.changeStatus('SUSPENDED', time)
   }
 
-  reopen() {
-    // if (isBefore(time, this.createdAt)) {
-    //   throw new Error('Invalid reopening time')
-    // }
-    if (this.props.status !== 'SUSPENDED') {
-      if (this.props.status === 'CLOSED') {
-        throw new MarketAlreadyClosedError()
-      }
-      throw new Error('Market cannot be opened if not suspended')
-    }
-    this.props.status = 'OPEN'
+  reopen(time: Date) {
+    this.changeStatus('OPEN', time)
   }
 
   close(time: Date) {
     if (this.props.odds.length === 0) {
       throw new MarketWithoutOddsError()
-    }
-
-    if (this.props.status === 'CLOSED') {
-      throw new MarketAlreadyClosedError()
     }
 
     if (!this.props.inPlayDate || isBefore(time, this.props.inPlayDate)) {
@@ -204,7 +204,22 @@ export class Market extends Entity<MarketProps> {
       // throw new Error('Market cannot be closed before 90 minutes')
     }
 
-    this.props.closedAt = time
-    this.props.status = 'CLOSED'
+    this.changeStatus('CLOSED', time)
+  }
+
+  private changeStatus(status: MarketStatusType, time: Date) {
+    if (isBefore(time, this.createdAt)) {
+      throw new Error('Invalid status time')
+    }
+
+    if (this.status === status) {
+      throw new MarketStatusAlreadyDefinedError()
+    }
+
+    if (this.status === 'CLOSED') {
+      throw new MarketAlreadyClosedError()
+    }
+
+    this.statusHistory.push(new MarketStatus(status, time))
   }
 }

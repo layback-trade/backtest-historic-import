@@ -101,4 +101,12 @@ export class PrismaImportsRepository implements ImportsRepository {
       )
     })
   }
+
+  async delete(id: string) {
+    await prisma.import.delete({
+      where: {
+        id,
+      },
+    })
+  }
 }

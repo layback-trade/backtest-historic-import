@@ -28,4 +28,8 @@ export class InMemoryEventsRepository implements EventsRepository {
 
     return InMemoryEventMapper.toDomain({ ...event, id })
   }
+
+  async countWithoutMarket(): Promise<number> {
+    throw new Error('Method not implemented.')
+  }
 }

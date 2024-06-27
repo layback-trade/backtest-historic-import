@@ -1,6 +1,5 @@
 import { CreateCompetitionUseCase } from '@/domain/match/application/use-cases/create-competition'
 import { CreateMatchUseCase } from '@/domain/match/application/use-cases/create-match'
-import { CreateTeamUseCase } from '@/domain/match/application/use-cases/create-team'
 import { EndMatchFirstHalfUseCase } from '@/domain/match/application/use-cases/end-match-first-half'
 import { EndMatchSecondHalfUseCase } from '@/domain/match/application/use-cases/end-match-second-half'
 import { RegisterNewMatchStatisticUseCase } from '@/domain/match/application/use-cases/register-new-match-statistic'
@@ -13,7 +12,6 @@ import { MatchVendor } from '@/infra/match-vendor'
 import {
   inMemoryCompetitionsRepository,
   inMemoryMatchesRepository,
-  inMemoryTeamsRepository,
 } from '@/infra/http/make-instances'
 import { Job } from 'bullmq'
 import { isAfter, isBefore } from 'date-fns'
@@ -30,7 +28,7 @@ export class MatchResourcesHandler
     inMemoryCompetitionsRepository,
   )
 
-  private createTeamUseCase = new CreateTeamUseCase(inMemoryTeamsRepository)
+  // private createTeamUseCase = new CreateTeamUseCase(inMemoryTeamsRepository)
 
   private createMatchUseCase = new CreateMatchUseCase(inMemoryMatchesRepository)
 
@@ -67,10 +65,13 @@ export class MatchResourcesHandler
     const matches = await this.matchVendor.fetchMatches(data.eventsIdBatch)
 
     for (const match of matches) {
+      if (!match.secondHalfStart || !match.firstHalfEnd) {
+        console.log('Sem first half end ou second half start 2', { match })
+      }
       await Promise.all([
         this.createCompetitionUseCase.execute(match.competition),
-        this.createTeamUseCase.execute(match.homeTeam),
-        this.createTeamUseCase.execute(match.awayTeam),
+        // this.createTeamUseCase.execute(match.homeTeam),
+        // this.createTeamUseCase.execute(match.awayTeam),
       ])
 
       await this.createMatchUseCase.execute({
@@ -94,6 +95,9 @@ export class MatchResourcesHandler
       }
 
       try {
+        if (!match.firstHalfEnd || !match.secondHalfStart) {
+          console.log('Sem first half end ou second half start 3', { match })
+        }
         await this.endMatchFirstHalfUseCase.execute({
           id: match.id,
           timestamp: match.firstHalfEnd,
@@ -117,6 +121,7 @@ export class MatchResourcesHandler
             )
           }
         }
+        console.error(err)
       }
       for (const statistic of match.statistics.filter((stat) =>
         isAfter(stat.timestamp, match.firstHalfEnd),

@@ -1,8 +1,6 @@
 import { Optional } from '@/core/type-utils'
 import { differenceInMinutes, isBefore, isFuture } from 'date-fns'
 import { Entity } from '../../../core/entity'
-import { IntervalTooShortError } from './errors/Interval-too-short-error'
-import { FirstHalfTooLongError } from './errors/first-half-too-long-error'
 import { Statistic, StatisticType } from './value-objects/statistic'
 
 interface MatchProps {
@@ -116,12 +114,12 @@ export class Match extends Entity<MatchProps> {
       throw new Error('Match must have at least one statistic')
       // Flag no evento e salva
     }
-    if (differenceInMinutes(timestamp, this.props.firstHalfStart) < 45) {
-      throw new Error('First half must last at least 45 minutes')
-    }
-    if (differenceInMinutes(timestamp, this.props.firstHalfStart) > 60) {
-      throw new FirstHalfTooLongError()
-    }
+    // if (differenceInMinutes(timestamp, this.props.firstHalfStart) < 44) {
+    //   throw new Error('First half must last at least 44 minutes')
+    // }
+    // if (differenceInMinutes(timestamp, this.props.firstHalfStart) > 60) {
+    //   throw new FirstHalfTooLongError()
+    // }
     this.props.firstHalfEnd = timestamp
   }
 
@@ -132,17 +130,23 @@ export class Match extends Entity<MatchProps> {
     if (!this.props.firstHalfEnd) {
       throw new Error('First half not ended yet')
     }
-    if (isBefore(timestamp, this.props.firstHalfEnd)) {
-      throw new Error(
-        'Second half start must be later than the first half ending',
-      )
-    }
-    if (differenceInMinutes(timestamp, this.props.firstHalfEnd) < 5) {
-      throw new IntervalTooShortError()
-    }
-    if (differenceInMinutes(timestamp, this.props.firstHalfEnd) > 25) {
-      throw new Error('Interval must not last more than 25 minutes')
-    }
+    // if (differenceInMinutes(timestamp, this.props.firstHalfEnd) <= -2) {// 
+    //   throw new Error(
+    //     'Second half start must be later than the first half ending',
+    //   )
+    // }
+    // if (differenceInMinutes(timestamp, this.props.firstHalfEnd) < 5) {
+    //   throw new IntervalTooShortError()
+    // }
+    // if (differenceInMinutes(timestamp, this.props.firstHalfEnd) > 25) {
+    //   console.log({
+    //     differenceInMinutes: differenceInMinutes(
+    //       timestamp,
+    //       this.props.firstHalfEnd,
+    //     ),
+    //   })
+    //   throw new Error('Interval must not last more than 25 minutes')
+    // }
     this.props.secondHalfStart = timestamp
   }
 
@@ -156,11 +160,11 @@ export class Match extends Entity<MatchProps> {
     if (isBefore(timestamp, this.props.secondHalfStart)) {
       throw new Error('Second half end must not be earlier than the start')
     }
-    if (differenceInMinutes(timestamp, this.props.secondHalfStart) < 45) {
-      throw new Error('Second half must last at least 45 minutes')
+    if (differenceInMinutes(timestamp, this.props.secondHalfStart) < 44) {
+      throw new Error('Second half must last at least 44 minutes')
     }
-    if (differenceInMinutes(timestamp, this.props.secondHalfStart) > 60) {
-      throw new Error('Second half must not last more than 60 minutes')
+    if (differenceInMinutes(timestamp, this.props.secondHalfStart) > 80) {
+      throw new Error('Second half must not last more than 80 minutes')
     }
     this.props.secondHalfEnd = timestamp
   }
@@ -218,7 +222,7 @@ export class Match extends Entity<MatchProps> {
 
     if (
       lastStatistic &&
-      statistic.type !== 'GOALS' &&
+      statistic.type !== 'GOAL' &&
       statistic.type !== 'POSSESSION' &&
       statistic.value < lastStatistic.value
     ) {
@@ -240,7 +244,7 @@ export class Match extends Entity<MatchProps> {
     //   score
     // }
     // this.props.statistics.reduce(
-    //   (statistic) => statistic.type === 'GOALS' && statistic.type,
+    //   (statistic) => statistic.type === 'GOAL' && statistic.type,
     // )
     // // probably not necessary if you get the last ones
     // const [lastGoal,] = goals.slice(0, 1)

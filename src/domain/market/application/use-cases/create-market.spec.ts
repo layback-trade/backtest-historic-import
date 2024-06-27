@@ -1,6 +1,8 @@
 import { ConflictError } from '@/core/errors/conflict-error'
 import { InMemoryEventsRepository } from '@/infra/repositories/in-memory/in-memory-events-repository'
 import { InMemoryMarketsRepository } from '@/infra/repositories/in-memory/in-memory-markets-repository'
+import { MarketStatus } from '../../enterprise/entities/value-objects/market-status'
+import { Selection } from '../../enterprise/entities/value-objects/selection'
 import { CreateMarketUseCase } from './create-market'
 
 let sut: CreateMarketUseCase
@@ -27,15 +29,20 @@ describe('Add market for event', async () => {
       eventId: '1',
       createdAt: new Date('2022-04-23T10:00:00Z'),
       marketId: '1',
-      selections: ['1', '2', 'The Draw'],
+      selections: [
+        new Selection('1', 'team 1'),
+        new Selection('2', 'team 2'),
+        new Selection('3', 'The Draw'),
+      ],
       type: 'MATCH_ODDS',
     })
 
     expect(inMemoryMarketsRepository.markets.get('1')).toEqual(
       expect.objectContaining({
-        selections: ['1', '2', 'The Draw'],
         type: 'MATCH_ODDS',
-        status: 'OPEN',
+        statusHistory: [
+          new MarketStatus('OPEN', new Date('2022-04-23T10:00:00Z')),
+        ],
         odds: [],
       }),
     )
@@ -48,9 +55,15 @@ describe('Add market for event', async () => {
     })
 
     inMemoryMarketsRepository.markets.set('1', {
-      selections: ['1', '2', 'The Draw'],
+      selections: [
+        new Selection('1', 'team 1'),
+        new Selection('2', 'team 2'),
+        new Selection('3', 'The Draw'),
+      ],
       type: 'MATCH_ODDS',
-      status: 'OPEN',
+      statusHistory: [
+        new MarketStatus('OPEN', new Date('2022-04-23T12:00:00Z')),
+      ],
       createdAt: new Date('2022-04-23T12:00:00Z'),
       eventId: '1',
       odds: [
@@ -65,9 +78,13 @@ describe('Add market for event', async () => {
     expect(() =>
       sut.execute({
         eventId: '1',
-        createdAt: new Date('2022-04-23T10:00:00Z'),
+        createdAt: new Date('2022-04-23T12:00:00Z'),
         marketId: '2',
-        selections: ['1', '2', 'The Draw'],
+        selections: [
+          new Selection('1', 'team 1'),
+          new Selection('2', 'team 2'),
+          new Selection('3', 'The Draw'),
+        ],
         type: 'MATCH_ODDS',
       }),
     ).rejects.toThrowError(ConflictError)

@@ -2,6 +2,7 @@ import { ConflictError } from '@/core/errors/conflict-error'
 import { CreateEventUseCase } from '@/domain/market/application/use-cases/create-event'
 import { CreateMarketUseCase } from '@/domain/market/application/use-cases/create-market'
 
+import { Selection } from '@/domain/market/enterprise/entities/value-objects/selection'
 import {
   inMemoryEventsRepository,
   inMemoryMarketsRepository,
@@ -26,17 +27,17 @@ export class Publisher {
 
   public importId: string = ''
   public importType: 'event' | 'period' = 'period'
-
+  
   async publishAll(marketData: FullMarketFile[]) {
     const marketId = marketData[0].mc[0].id
 
-    if (!marketData[0].mc[0].marketDefinition) {
+    if (!marketData[marketData.length-1].mc[0].marketDefinition) {
       throw new Error('Invalid market definition')
     }
 
-    // Register event and market
     const { eventId, eventName, marketType, runners, openDate } =
-      marketData[0].mc[0].marketDefinition
+      marketData[marketData.length-1].mc[0].marketDefinition!
+
     try {
       const eventAlreadyExists =
         await inMemoryEventsRepository.findById(eventId)
@@ -60,7 +61,9 @@ export class Publisher {
           eventId,
           marketId,
           type: marketType,
-          selections: runners.map((runner) => runner.name),
+          selections: runners.map(
+            (runner) => new Selection(String(runner.id), runner.name),
+          ),
           createdAt: new Date(marketData[0].pt),
         })
       } else {
@@ -77,6 +80,7 @@ export class Publisher {
         `)
         // return { market: null }
       }
+      return
     }
 
     // dispatch data unification
@@ -85,7 +89,8 @@ export class Publisher {
 
     queues.marketQueue.add(`MARKET-${eventId}-${marketId}`, marketData, {
       removeOnComplete: true,
-      // removeOnFail: true,
+      removeOnFail: false,
+      attempts: 2,
     })
 
     const matchWasFetched = this.eventsWithMatchAlreadyFetched.has(eventId)
@@ -96,8 +101,8 @@ export class Publisher {
     this.publishMatches(this.importType === 'event')
   }
 
-  public publishMatches(shouldOverpassBatchMinimum = false) {
-    if (this.currentEventsToFetchMatch.size === 0) return
+  public publishMatches(shouldOverpassBatchMinimum = false): boolean {
+    if (this.currentEventsToFetchMatch.size === 0) return false
 
     const reachTheBatchMinimum =
       this.currentEventsToFetchMatch.size >=
@@ -119,7 +124,12 @@ export class Publisher {
         { eventsIdBatch: eventsToFetchMatchToArray },
         {
           removeOnComplete: true,
-          // removeOnFail: true,
+          removeOnFail: false,
+          backoff: {
+            type: 'exponential',
+            delay: 3000,
+          },
+          attempts: 3,
         },
       )
 
@@ -128,7 +138,9 @@ export class Publisher {
       })
 
       this.currentEventsToFetchMatch.clear()
+      return true
     }
+    return false
   }
 
   public publishMatchesToSave(shouldOverpassBatchMinimum = false) {
@@ -139,7 +151,7 @@ export class Publisher {
 
     if (reachTheBatchMinimum || shouldOverpassBatchMinimum) {
       queues.dataSavingQueue.add('DATA-SAVING', null, {
-        removeOnComplete: false,
+        removeOnComplete: true,
         removeOnFail: false,
       })
       this.currentEventsToSave.clear()

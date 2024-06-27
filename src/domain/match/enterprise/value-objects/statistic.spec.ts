@@ -9,7 +9,7 @@ describe('Statistic', () => {
 
   beforeEach(() => {
     teamSide = 'home'
-    type = 'GOALS'
+    type = 'GOAL'
     timestamp = new Date()
     value = 1
   })

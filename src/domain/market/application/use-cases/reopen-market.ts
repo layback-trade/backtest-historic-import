@@ -2,12 +2,13 @@ import { MarketsRepository } from '../repositories/markets-repository'
 
 interface ReopenMarketUseCaseProps {
   marketId: string
+  time: Date
 }
 
 export class ReopenMarketUseCase {
   constructor(private marketsRepository: MarketsRepository) {}
 
-  async execute({ marketId }: ReopenMarketUseCaseProps) {
+  async execute({ marketId, time }: ReopenMarketUseCaseProps) {
     const market = await this.marketsRepository.findById(marketId)
 
     /* v8 ignore next 3 */
@@ -15,7 +16,7 @@ export class ReopenMarketUseCase {
       throw new Error('Market does not exist!')
     }
 
-    market.reopen()
+    market.reopen(time)
 
     await this.marketsRepository.save(market)
   }

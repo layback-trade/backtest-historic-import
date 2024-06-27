@@ -9,7 +9,7 @@ const statisticsMap = new Map([
   ['substitutions', 'SUBSTITUTION'],
   ['redcards', 'RED_CARD'],
   ['penalties', 'PENALTY'],
-  ['goals', 'GOALS'],
+  ['goals', 'GOAL'],
   ['corners', 'CORNER'],
   ['attacks', 'ATTACK'],
   ['dangerous_attacks', 'DANGEROUS_ATTACK'],
@@ -161,10 +161,23 @@ export class BetsAPIMatchVendor implements MatchVendor {
           const { firstHalfEnd, firstHalfStart, secondHalfStart } =
             this.defineMatchPeriods(matchStatistics)
 
+          if (isFuture(firstHalfStart)) {
+            betsAPIMatches.splice(betsAPIMatches.indexOf(match), 1)
+          }
+
+          // // must have at least 1 statistic for each type
+          // statisticsMap.forEach((type) => {
+          //   if (!matchStatistics.find((st) => st.type === type)) {
+          //     const index = betsAPIMatches.indexOf(match)
+          //     if (index > -1) {
+          //       betsAPIMatches.splice(index, 1)
+          //     }
+          //   }
+          // })
           match.firstHalfEnd = firstHalfEnd
           match.firstHalfStart = firstHalfStart
           match.secondHalfStart = secondHalfStart
-          match.statistics = matchStatistics.filter((st) => st.value !== 0)
+          match.statistics = matchStatistics // .filter((st) => st.value !== 0)
         } else {
           // remove match from the list
           betsAPIMatches.splice(betsAPIMatches.indexOf(match), 1)
@@ -302,7 +315,7 @@ export class BetsAPIMatchVendor implements MatchVendor {
       )
 
     if (isFuture(mostLikelyFirstHalfStart)) {
-      console.log(matchStatistics)
+      console.log({ mostLikelyFirstHalfStart })
     }
     if (
       differenceInMinutes(periods.firstHalfEnd, periods.secondHalfStart) <= 2 &&

@@ -66,7 +66,7 @@ export class QueueManager {
       ) {
         new BullWorker(name, worker.handler, {
           connection: queueRedis,
-          lockDuration: 1000 * 100,
+          lockDuration: 1000 * 1200, // 20 minutes
         })
           .on('error', (err) => {
             console.error(err)
