@@ -46,7 +46,7 @@ process.on('uncaughtException', async function (err) {
   console.error('Exceção inesperada: ', err)
 })
 
-server.listen({ port: env.PORT }, (err, address) => {
+server.listen({ port: env.PORT, host: '0.0.0.0' }, (err, address) => {
   if (err) {
     server.log.error(err)
     process.exit(1)
