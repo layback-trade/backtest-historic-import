@@ -87,7 +87,7 @@ export class DataSavingHandler implements WorkerHandler<null> {
     let odds: SelectionOdd[] = []
     let selections: Selection[] = []
 
-    inMemoryMarketsRepository.markets.forEach((market) => {
+    inMemoryMarketsRepository.markets.forEach((market, id) => {
       const match = matches.find((m) => m.id === Number(market.eventId))
       const matchIndex = matches.findIndex(
         (m) => m.id === Number(market.eventId),
@@ -151,6 +151,7 @@ export class DataSavingHandler implements WorkerHandler<null> {
       const oddsWithPersistedFormat = oddsMapper.toPersistence(
         market.statusHistory.at(-1)!.timestamp,
       )
+      
 
       const oddsSuspender = new OddsSuspender(
         market,

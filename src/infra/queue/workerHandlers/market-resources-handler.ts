@@ -187,9 +187,9 @@ export class MarketResourcesHandler implements WorkerHandler<FullMarketFile[]> {
             if (err instanceof MarketAlreadyClosedError) {
               DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
             }
-            else if (err instanceof Error) {
-              DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
-            }
+            // else if (err instanceof Error) {
+            //   DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+            // }
           }
         }
       }
