@@ -50,43 +50,6 @@ export class DataSavingHandler implements WorkerHandler<null> {
     let statistics: PrismaStatistic[] = []
     const matches: Event[] = []
 
-    inMemoryMatchesRepository.matches.forEach((inMemoryMatch, id) => {
-      const event = inMemoryEventsRepository.events.get(id)!
-
-      if (!event) {
-        console.log('Sem evento', { matchId: id })
-        throw new Error('Sem evento')
-      }
-
-      if (!inMemoryMatch.secondHalfStart || !inMemoryMatch.firstHalfEnd) {
-        // '33238130', '33239449'
-        console.log('Sem first half end ou second half start', {
-          match: inMemoryMatch,
-        })
-        return null
-      }
-
-      const { match, statistics: statisticsFormatted } = PrismaMatchMapper.toPersistence({
-        match: {
-          ...inMemoryMatch,
-          id,
-          secondHalfStart: inMemoryMatch.secondHalfStart!,
-          firstHalfEnd: inMemoryMatch.firstHalfEnd!,
-        },
-        event,
-      })
-
-      inMemoryMatchesRepository.matches.delete(String(id))
-      inMemoryEventsRepository.events.delete(String(id))
-
-      statistics.push(...statisticsFormatted)
-      matches.push(match)
-    })
-
-    let marketsWithMatches: Market[] = []
-    let odds: SelectionOdd[] = []
-    let selections: Selection[] = []
-
     inMemoryMarketsRepository.markets.forEach((market, id) => {
       const match = matches.find((m) => m.id === Number(market.eventId))
       const matchIndex = matches.findIndex(
@@ -132,6 +95,45 @@ export class DataSavingHandler implements WorkerHandler<null> {
         })
       }
     })
+
+    inMemoryMatchesRepository.matches.forEach((inMemoryMatch, id) => {
+      const event = inMemoryEventsRepository.events.get(id)!
+
+      if (!event) {
+        console.log('Sem evento', { matchId: id })
+        throw new Error('Sem evento')
+      }
+
+      if (!inMemoryMatch.secondHalfStart || !inMemoryMatch.firstHalfEnd) {
+        // '33238130', '33239449'
+        console.log('Sem first half end ou second half start', {
+          match: inMemoryMatch,
+        })
+        return null
+      }
+
+      const { match, statistics: statisticsFormatted } = PrismaMatchMapper.toPersistence({
+        match: {
+          ...inMemoryMatch,
+          id,
+          secondHalfStart: inMemoryMatch.secondHalfStart!,
+          firstHalfEnd: inMemoryMatch.firstHalfEnd!,
+        },
+        event,
+      })
+
+      inMemoryMatchesRepository.matches.delete(String(id))
+      inMemoryEventsRepository.events.delete(String(id))
+
+      statistics.push(...statisticsFormatted)
+      matches.push(match)
+    })
+
+    let marketsWithMatches: Market[] = []
+    let odds: SelectionOdd[] = []
+    let selections: Selection[] = []
+
+
 
     inMemoryMarketsRepository.markets.forEach((market, marketId) => {
       const match = matches.find((m) => m.id === Number(market.eventId))

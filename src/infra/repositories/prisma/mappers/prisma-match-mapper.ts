@@ -80,11 +80,32 @@ export class PrismaMatchMapper {
       )
       .at(-1)
 
+      let homeTeamScore = 0
+      let awayTeamScore = 0
+      let homeTeamHTScore = 0
+      let awayTeamHTScore = 0
+
+      if(HTScore?.teamSide === 'home') {
+        homeTeamHTScore = HTScore.value
+        awayTeamHTScore = HTScore?.oppositeSideValue ?? 0
+      } else if (HTScore?.teamSide === 'away') {
+        awayTeamHTScore = HTScore.value
+        homeTeamHTScore = HTScore?.oppositeSideValue ?? 0
+      }
+
+      if(lastScore?.teamSide === 'home') {
+        homeTeamScore = lastScore.value
+        awayTeamScore = lastScore?.oppositeSideValue ?? 0
+      } else if (lastScore?.teamSide === 'away') {
+        awayTeamScore = lastScore.value
+        homeTeamScore = lastScore?.oppositeSideValue ?? 0
+      }
+
     return {
-      homeTeamHTScore: HTScore?.teamSide === 'home' ? HTScore.value : 0,
-      awayTeamHTScore: HTScore?.teamSide === 'away' ? HTScore.value : 0,
-      homeTeamScore: lastScore?.teamSide === 'home' ? lastScore.value : 0,
-      awayTeamScore: lastScore?.teamSide === 'away' ? lastScore.value : 0,
+      homeTeamHTScore,
+      awayTeamHTScore,
+      homeTeamScore,
+      awayTeamScore,
     }
   }
 }
