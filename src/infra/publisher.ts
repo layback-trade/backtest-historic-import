@@ -3,6 +3,7 @@ import { CreateEventUseCase } from '@/domain/market/application/use-cases/create
 import { CreateMarketUseCase } from '@/domain/market/application/use-cases/create-market'
 
 import { Selection } from '@/domain/market/enterprise/entities/value-objects/selection'
+import { isBefore, startOfDay } from 'date-fns'
 import {
   inMemoryEventsRepository,
   inMemoryMarketsRepository,
@@ -28,7 +29,7 @@ export class Publisher {
   public importId: string = ''
   public importType: 'event' | 'period' = 'period'
   
-  async publishAll(marketData: FullMarketFile[]) {
+  async publishAll(marketData: FullMarketFile[], startDate: Date, endDate: Date) {
     const marketId = marketData[0].mc[0].id
 
     if (!marketData[marketData.length-1].mc[0].marketDefinition) {
@@ -37,6 +38,10 @@ export class Publisher {
 
     const { eventId, eventName, marketType, runners, openDate } =
       marketData[marketData.length-1].mc[0].marketDefinition!
+
+      if(isBefore(new Date(openDate), startOfDay(startDate)) || new Date(openDate).getTime() >= startOfDay(endDate).getTime()) {
+        return
+      }
 
     try {
       const eventAlreadyExists =

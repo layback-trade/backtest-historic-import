@@ -51,16 +51,13 @@ export class DataSavingHandler implements WorkerHandler<null> {
     const matches: Event[] = []
 
     inMemoryMarketsRepository.markets.forEach((market, id) => {
-      const match = matches.find((m) => m.id === Number(market.eventId))
-      const matchIndex = matches.findIndex(
-        (m) => m.id === Number(market.eventId),
-      )
+      const match = inMemoryMatchesRepository.matches.get(String(market.eventId))
       if (!match) {
         return null
       }
 
       if (market.statusHistory.at(-1)!.name !== 'CLOSED') {
-        matches.splice(matchIndex, 1)
+        inMemoryMatchesRepository.matches.delete(String(market.eventId))
         return null
       }
 
@@ -88,21 +85,16 @@ export class DataSavingHandler implements WorkerHandler<null> {
           { id: Number(home.id), name: home.name },
           { id: Number(away.id), name: away.name },
         )
-        matches.splice(matchIndex, 1, {
+        inMemoryMatchesRepository.matches.set(String(market.eventId), {
           ...match,
-          homeTeamId: Number(home.id),
-          awayTeamId: Number(away.id),
-        })
+          homeTeamId: home.id,
+          awayTeamId: away.id,
+        }) 
       }
     })
 
     inMemoryMatchesRepository.matches.forEach((inMemoryMatch, id) => {
       const event = inMemoryEventsRepository.events.get(id)!
-
-      if (!event) {
-        console.log('Sem evento', { matchId: id })
-        throw new Error('Sem evento')
-      }
 
       if (!inMemoryMatch.secondHalfStart || !inMemoryMatch.firstHalfEnd) {
         // '33238130', '33239449'
@@ -132,8 +124,6 @@ export class DataSavingHandler implements WorkerHandler<null> {
     let marketsWithMatches: Market[] = []
     let odds: SelectionOdd[] = []
     let selections: Selection[] = []
-
-
 
     inMemoryMarketsRepository.markets.forEach((market, marketId) => {
       const match = matches.find((m) => m.id === Number(market.eventId))

@@ -22,11 +22,11 @@ export class StartRemoteImportUseCase {
     endDate,
     startDate,
   }: StartRemoteImportUseCaseProps): Promise<Import> {
-    const period = new Period(startDate, addDays(endDate, 1))
+    endDate = addDays(endDate, 1)
+    const period = new Period(startDate, endDate)
 
     const importEntity = new Import({
       period,
-      // specificEventId: specificEventId ?? undefined,
     })
     publisher.importId = importEntity.id
 
@@ -40,7 +40,7 @@ export class StartRemoteImportUseCase {
         const marketDataJSON =
           await BZ2Reader.convertToString<FullMarketFile>(stream)
 
-        await publisher.publishAll(marketDataJSON)
+        await publisher.publishAll(marketDataJSON, startDate, endDate)
         next()
       })
 
