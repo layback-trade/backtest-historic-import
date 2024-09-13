@@ -50,7 +50,7 @@ describe('Invalidade odds', () => {
         gameTimeStatus: 'FIRST_HALF',
         gameTimePeriod: 0,
         status: 'REGULAR',
-        originalGameTime: -1
+        originalGameTime: -1,
       },
     ]
 

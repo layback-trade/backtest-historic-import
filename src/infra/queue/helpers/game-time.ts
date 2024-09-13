@@ -23,16 +23,26 @@ export class GameTime {
   ) {
     if (isAfter(timestamp, secondHalfStart)) {
       this._period = GamePeriod.SECOND_HALF
-      this._minute = 46 + Math.ceil(differenceInSeconds(timestamp, secondHalfStart) / 60)
+      this._minute =
+        46 + Math.ceil(differenceInSeconds(timestamp, secondHalfStart) / 60)
     } else if (isAfter(timestamp, firstHalfEnd)) {
       this._period = GamePeriod.INTERVAL
-      this._minute = Math.ceil(differenceInSeconds(timestamp, firstHalfEnd) / 60)
-    } else if (isAfter(timestamp, firstHalfStart) || timestamp.getTime() === firstHalfStart.getTime()){
+      this._minute = Math.ceil(
+        differenceInSeconds(timestamp, firstHalfEnd) / 60,
+      )
+    } else if (
+      isAfter(timestamp, firstHalfStart) ||
+      timestamp.getTime() === firstHalfStart.getTime()
+    ) {
       this._period = GamePeriod.FIRST_HALF
-      this._minute = Math.ceil(differenceInSeconds(timestamp, firstHalfStart) / 60)
+      this._minute = Math.ceil(
+        differenceInSeconds(timestamp, firstHalfStart) / 60,
+      )
     } else {
       this._period = GamePeriod.PRELIVE
-      this._minute = Math.ceil(differenceInSeconds(timestamp, firstHalfStart) / 60)
+      this._minute = Math.ceil(
+        differenceInSeconds(timestamp, firstHalfStart) / 60,
+      )
     }
 
     if (this._minute > 120) {

@@ -46,7 +46,7 @@ export class PrismaMatchMapper {
     )
 
     const { awayTeamHTScore, awayTeamScore, homeTeamHTScore, homeTeamScore } =
-      PrismaMatchMapper.getScores(match, statisticsToPersistence)
+      PrismaMatchMapper.getScores(statisticsToPersistence)
 
     return {
       match: {
@@ -69,37 +69,37 @@ export class PrismaMatchMapper {
     }
   }
 
-  private static getScores(match: MatchInput, statistics: PrismaStatistic[]) {
-    const lastScore = statistics.filter((stat) => stat.type === 'GOAL').at(-1)
+  private static getScores(statistics: PrismaStatistic[]) {
+    const scores = statistics
+      .filter((stat) => stat.type === 'GOAL' && stat.status !== 'CANCELED')
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    const lastScore = scores.at(-1)
 
-    const HTScore = statistics
-      .filter(
-        (stat) =>
-          stat.type === 'GOAL' &&
-          stat.createdAt.getTime() < match.firstHalfEnd!.getTime(),
-      )
-      .at(-1)
+    const HTScores = scores
+      .filter((stat) => stat.gameTimeStatus === 'FIRST_HALF')
+      .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+    const HTScore = HTScores.at(-1)
 
-      let homeTeamScore = 0
-      let awayTeamScore = 0
-      let homeTeamHTScore = 0
-      let awayTeamHTScore = 0
+    let homeTeamScore = 0
+    let awayTeamScore = 0
+    let homeTeamHTScore = 0
+    let awayTeamHTScore = 0
 
-      if(HTScore?.teamSide === 'home') {
-        homeTeamHTScore = HTScore.value
-        awayTeamHTScore = HTScore?.oppositeSideValue ?? 0
-      } else if (HTScore?.teamSide === 'away') {
-        awayTeamHTScore = HTScore.value
-        homeTeamHTScore = HTScore?.oppositeSideValue ?? 0
-      }
+    if (HTScore?.teamSide === 'home') {
+      homeTeamHTScore = HTScore.value
+      awayTeamHTScore = HTScore?.oppositeSideValue ?? 0
+    } else if (HTScore?.teamSide === 'away') {
+      awayTeamHTScore = HTScore.value
+      homeTeamHTScore = HTScore?.oppositeSideValue ?? 0
+    }
 
-      if(lastScore?.teamSide === 'home') {
-        homeTeamScore = lastScore.value
-        awayTeamScore = lastScore?.oppositeSideValue ?? 0
-      } else if (lastScore?.teamSide === 'away') {
-        awayTeamScore = lastScore.value
-        homeTeamScore = lastScore?.oppositeSideValue ?? 0
-      }
+    if (lastScore?.teamSide === 'home') {
+      homeTeamScore = lastScore.value
+      awayTeamScore = lastScore?.oppositeSideValue ?? 0
+    } else if (lastScore?.teamSide === 'away') {
+      awayTeamScore = lastScore.value
+      homeTeamScore = lastScore?.oppositeSideValue ?? 0
+    }
 
     return {
       homeTeamHTScore,

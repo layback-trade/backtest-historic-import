@@ -28,20 +28,27 @@ export class Publisher {
 
   public importId: string = ''
   public importType: 'event' | 'period' = 'period'
-  
-  async publishAll(marketData: FullMarketFile[], startDate: Date, endDate: Date) {
+
+  async publishAll(
+    marketData: FullMarketFile[],
+    startDate: Date,
+    endDate: Date,
+  ) {
     const marketId = marketData[0].mc[0].id
 
-    if (!marketData[marketData.length-1].mc[0].marketDefinition) {
+    if (!marketData[marketData.length - 1].mc[0].marketDefinition) {
       throw new Error('Invalid market definition')
     }
 
     const { eventId, eventName, marketType, runners, openDate } =
-      marketData[marketData.length-1].mc[0].marketDefinition!
+      marketData[marketData.length - 1].mc[0].marketDefinition!
 
-      if(isBefore(new Date(openDate), startOfDay(startDate)) || new Date(openDate).getTime() >= startOfDay(endDate).getTime()) {
-        return
-      }
+    if (
+      isBefore(new Date(openDate), startOfDay(startDate)) ||
+      new Date(openDate).getTime() >= startOfDay(endDate).getTime()
+    ) {
+      return
+    }
 
     try {
       const eventAlreadyExists =

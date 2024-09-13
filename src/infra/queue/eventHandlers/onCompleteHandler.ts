@@ -26,12 +26,14 @@ export class OnCompleteHandler {
     const shouldPublishLastMatches =
       data.eventsIdBatch.length < 10 || matchesToFetch.length === 0
 
-    const publishedNewMatches = publisher.publishMatches(shouldPublishLastMatches)
-    if(!publishedNewMatches && shouldPublishLastMatches) {
+    const publishedNewMatches = publisher.publishMatches(
+      shouldPublishLastMatches,
+    )
+    if (!publishedNewMatches && shouldPublishLastMatches) {
       return publisher.publishMatchesToSave(true)
     }
 
-    const isTheLastMatchJob = name.includes('OVERPASS') //|| (matchesToFetch.length === 0 && data.eventsIdBatch.length === 10)
+    const isTheLastMatchJob = name.includes('OVERPASS') // || (matchesToFetch.length === 0 && data.eventsIdBatch.length === 10)
     if (isTheLastMatchJob) {
       publisher.publishMatchesToSave(true)
     }
@@ -71,7 +73,7 @@ export class OnCompleteHandler {
         importId: publisher.importId,
       })
 
-      console.time("Atualização de histórico dos times")
+      console.time('Atualização de histórico dos times')
       await pool.query(`
       BEGIN;
         insert into LastTeamMatches(id, eventIdLast, id_mesmo_mando, id_mesma_competicao, qt_jogo_passado_casa, qt_jogo_passado_fora)
@@ -102,7 +104,7 @@ export class OnCompleteHandler {
         where LastTeamMatches.id = x.id and LastTeamMatches.eventIdLast = x.eventIdLast and LastTeamMatches.qt_jogo_passado_fora = 0;
       COMMIT;
       `)
-      console.timeEnd("Atualização de histórico dos times")
+      console.timeEnd('Atualização de histórico dos times')
     }
   }
 }

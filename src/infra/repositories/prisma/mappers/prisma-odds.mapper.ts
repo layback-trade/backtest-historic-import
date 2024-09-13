@@ -2,10 +2,7 @@ import { LinkedList, OddWithMarketId } from '@/core/linked-list'
 import { defaultSelectionsById } from '@/domain/market/enterprise/entities/value-objects/selection'
 import { StatisticTypeEnum } from '@/domain/match/enterprise/value-objects/statistic'
 import { GameTime, Periods } from '@/infra/queue/helpers/game-time'
-import {
-  SelectionOdd as PrismaOdd,
-  Statistic,
-} from '@prisma/client'
+import { SelectionOdd as PrismaOdd, Statistic } from '@prisma/client'
 import { addMinutes, differenceInSeconds, isBefore } from 'date-fns'
 import { InMemoryPersistenceMarket } from '../../in-memory/in-memory-markets-repository'
 
@@ -44,19 +41,20 @@ export class PrismaOddsMapper {
       let current = oddsList.head
       while (current) {
         const next = current.next
-        
+
         const oddInPrismaFormat = this.toPrismaFormat(
           current.value,
           next?.value.timestamp ?? null,
         )
         oddsToSave.push(oddInPrismaFormat)
-        
+
         if (next) {
           const artificialOddsCreated = this.fillGaps(current.value, next.value)
           oddsToSave.push(...artificialOddsCreated)
         } else {
           const shouldFillTillClosing =
-            differenceInSeconds(marketClosingTime, current.value.timestamp) > 118
+            differenceInSeconds(marketClosingTime, current.value.timestamp) >
+            118
           if (shouldFillTillClosing) {
             const lastOdd = {
               ...current.value,
@@ -78,20 +76,21 @@ export class PrismaOddsMapper {
         current = next
       }
     }
-    
+
     const oddsToSaveWithoutDuplicates: PrismaOdd[] = []
 
-    oddsToSave.forEach(odd => {
+    oddsToSave.forEach((odd) => {
       const duplicatedIndex = oddsToSaveWithoutDuplicates.findIndex(
         (o) =>
           o.marketId === odd.marketId &&
           o.selectionId === odd.selectionId &&
           o.gameTime === odd.gameTime &&
-          o.gameTimeStatus === odd.gameTimeStatus && o.createdAt !== odd.createdAt,
+          o.gameTimeStatus === odd.gameTimeStatus &&
+          o.createdAt !== odd.createdAt,
       )
 
-      if(duplicatedIndex > -1) {
-        oddsToSaveWithoutDuplicates.splice(duplicatedIndex, 1, odd) 
+      if (duplicatedIndex > -1) {
+        oddsToSaveWithoutDuplicates.splice(duplicatedIndex, 1, odd)
       } else {
         oddsToSaveWithoutDuplicates.push(odd)
       }
@@ -112,7 +111,11 @@ export class PrismaOddsMapper {
 
     const artificialOdds: PrismaOdd[] = []
     if (distanceInSeconds > MAX_GAP_IN_SECONDS) {
-      for (let i = Math.ceil(MAX_GAP_IN_SECONDS / 118); i < Math.ceil(distanceInSeconds / 118); i++) {
+      for (
+        let i = Math.ceil(MAX_GAP_IN_SECONDS / 118);
+        i < Math.ceil(distanceInSeconds / 118);
+        i++
+      ) {
         const newOdd = {
           ...odd,
           timestamp: addMinutes(currentTimestamp, i),
@@ -231,7 +234,8 @@ export class OddsGapFiller {
           oddsToSave.push(...gapFilled)
         } else {
           const shouldFillTillClosing =
-            differenceInSeconds(marketClosingTime, current.value.timestamp) > 118
+            differenceInSeconds(marketClosingTime, current.value.timestamp) >
+            118
           if (shouldFillTillClosing) {
             const lastOdd = {
               ...current.value,
@@ -305,22 +309,21 @@ export class OddsSuspender {
     goals: Statistic[],
     private prismaOdds: PrismaOdd[],
   ) {
-    this.goals = goals.filter(
-      (goal) => goal.type === StatisticTypeEnum.GOAL,
-    )
+    this.goals = goals.filter((goal) => goal.type === StatisticTypeEnum.GOAL)
   }
 
   public invalidateAll() {
     const marketSuspendedTimes = this.market.statusHistory
-    .filter((status) => status.name === 'SUSPENDED')
-    .map((status) => ({
-      startedAt: status.timestamp,
-      finishedAt: this.market.statusHistory
-        .slice(this.market.statusHistory.indexOf(status) + 1)
-        .find((status) => status.name !== 'SUSPENDED')!.timestamp,
-    }))
+      .filter((status) => status.name === 'SUSPENDED')
+      .map((status) => ({
+        startedAt: status.timestamp,
+        finishedAt: this.market.statusHistory
+          .slice(this.market.statusHistory.indexOf(status) + 1)
+          .find((status) => status.name !== 'SUSPENDED')!.timestamp,
+      }))
 
-    const suspendedTimesWithGoals = this.goals.filter(goal => goal.value > 0)
+    const suspendedTimesWithGoals = this.goals
+      .filter((goal) => goal.value > 0)
       .map((goal) => ({
         startedAt: goal.createdAt,
         finishedAt: addMinutes(goal.createdAt, 1),
@@ -331,24 +334,26 @@ export class OddsSuspender {
 
     this.prismaOdds.forEach((odd) => {
       let status = 'OPEN'
-       const previousOdd = oddsWithStatus
+      const previousOdd = oddsWithStatus
         .filter(
           (o) =>
             o.selectionId === odd.selectionId &&
             o.createdAt! < odd.createdAt! &&
             o.marketId === odd.marketId,
-        ).sort((a, b) => b.createdAt!.getTime() - a.createdAt!.getTime())[0]
-        
+        )
+        .sort((a, b) => b.createdAt!.getTime() - a.createdAt!.getTime())[0]
+
       if (
         suspendedTimesWithGoals.some(
           (suspendedTime) =>
             suspendedTime.startedAt <= odd.createdAt! &&
             odd.createdAt! <= suspendedTime.finishedAt,
-        ) || (previousOdd?.marketStatus === "SUSPENDED" && odd?.isArtificial)
+        ) ||
+        (previousOdd?.marketStatus === 'SUSPENDED' && odd?.isArtificial)
       ) {
         status = 'SUSPENDED'
       }
-      
+
       oddsWithStatus.push({
         ...odd,
         marketStatus: status,

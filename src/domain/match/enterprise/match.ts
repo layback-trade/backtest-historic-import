@@ -130,7 +130,7 @@ export class Match extends Entity<MatchProps> {
     if (!this.props.firstHalfEnd) {
       throw new Error('First half not ended yet')
     }
-    // if (differenceInMinutes(timestamp, this.props.firstHalfEnd) <= -2) {// 
+    // if (differenceInMinutes(timestamp, this.props.firstHalfEnd) <= -2) {//
     //   throw new Error(
     //     'Second half start must be later than the first half ending',
     //   )

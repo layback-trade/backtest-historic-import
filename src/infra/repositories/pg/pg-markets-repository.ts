@@ -9,12 +9,12 @@ import { pool } from './pool'
 
 export class PgCopyOdds {
   static async save(odds: SelectionOdd[]) {
-    if(odds.length === 0) {
+    if (odds.length === 0) {
       return
     }
     const copyId = `copy-${odds[0].marketId}`
     const dataPath = path.join(__dirname, `../../../../tmp/${copyId}.csv`)
-    
+
     await CSVConverter.convertToCSV({
       data: odds.map((odd) => ({
         selectionId: odd.selectionId,

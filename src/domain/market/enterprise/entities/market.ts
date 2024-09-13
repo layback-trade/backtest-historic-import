@@ -139,11 +139,14 @@ export class Market extends Entity<MarketProps> {
     if (isBefore(time, this.createdAt)) {
       throw new Error('Invalid inPlay time')
     }
-    const selectionsWithoutPreliveOdd = this.props.selections.filter((selection) =>
-      !this.props.odds.some((odd) => odd.selection === selection.id),
+    const selectionsWithoutPreliveOdd = this.props.selections.filter(
+      (selection) =>
+        !this.props.odds.some((odd) => odd.selection === selection.id),
     )
     selectionsWithoutPreliveOdd.forEach((selection) => {
-      this.props.selections = this.props.selections.filter((selection1) => selection1.id !== selection.id)
+      this.props.selections = this.props.selections.filter(
+        (selection1) => selection1.id !== selection.id,
+      )
     })
     // if (!hasOddsForAllSelections) {
     //   // throw new MarketWithoutPreliveOddsError()

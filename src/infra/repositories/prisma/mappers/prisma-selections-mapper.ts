@@ -24,9 +24,9 @@ export class PrismaSelectionMapper {
       .sort((a, b) => a.createdAt!.getTime() - b.createdAt!.getTime())
       .pop()
 
-      if(!lastOddBeforeInPlay) {
-        console.log('Sem odd antes do in play', {selection, marketId})
-      }
+    if (!lastOddBeforeInPlay) {
+      console.log('Sem odd antes do in play', { selection, marketId })
+    }
 
     return {
       id: Number(selection.id),

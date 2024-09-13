@@ -67,7 +67,7 @@ model Event {
   lastteammatches_lastteammatches_eventidlastToevents lastteammatches[] @relation("lastteammatches_eventidlastToevents")
   lastteammatches_lastteammatches_idToevents          lastteammatches[] @relation("lastteammatches_idToevents")
   markets                                             Market[]
-  Statistic                                           Statistic[]
+  statistics                                          Statistic[]
 
   @@index([startDate])
   @@map("events")

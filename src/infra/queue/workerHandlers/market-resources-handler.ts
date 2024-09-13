@@ -165,7 +165,7 @@ export class MarketResourcesHandler implements WorkerHandler<FullMarketFile[]> {
             DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
           }
           if (err instanceof MarketWithoutInPlayDateError) {
-            DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`) 
+            DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
             inMemoryMarketsRepository.markets.delete(marketId)
             break
           }

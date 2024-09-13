@@ -1,4 +1,7 @@
-import { Statistic, StatisticTypeEnum } from '@/domain/match/enterprise/value-objects/statistic'
+import {
+  Statistic,
+  StatisticTypeEnum,
+} from '@/domain/match/enterprise/value-objects/statistic'
 import { GameTime } from '@/infra/queue/helpers/game-time'
 import { Statistic as PrismaStatistic } from '@prisma/client'
 
@@ -93,10 +96,13 @@ export class PrismaStatisticsMapper {
           type: stat.type,
           originalGameTime: -1,
           value: stat.value,
-          oppositeSideValue:
-            oppositeSideStat?.value ? stat.type === 'POSSESSION'
+          oppositeSideValue: oppositeSideStat?.value
+            ? stat.type === 'POSSESSION'
               ? 100 - stat.value
-              : stat.value : 0,
+              : oppositeSideStat.value
+            : stat.type === 'POSSESSION'
+              ? 100 - stat.value
+              : 0,
           staledAt: nextStat?.timestamp ?? new Date('2050-01-01'),
           status,
           eventId: Number(matchId),
