@@ -9,7 +9,6 @@ import {
   ATTR_SERVICE_VERSION,
 } from '@opentelemetry/semantic-conventions'
 import 'dotenv/config'
-import { app } from './http/server'
 
 diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.WARN)
 
@@ -30,7 +29,7 @@ const sdk = new NodeSDK({
 })
 
 process.on('uncaughtException', async function (err) {
-  app.log.error('Uncaught exception: ', err)
+  console.error('Uncaught exception: ', err)
   await sdk.shutdown()
 })
 

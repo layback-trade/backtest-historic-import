@@ -39,6 +39,7 @@
     "@opentelemetry/auto-instrumentations-node": "^0.50.0",
     "@opentelemetry/exporter-metrics-otlp-proto": "^0.53.0",
     "@opentelemetry/instrumentation": "^0.53.0",
+    "@opentelemetry/instrumentation-fastify": "^0.39.0",
     "@opentelemetry/instrumentation-http": "^0.53.0",
     "@opentelemetry/node": "^0.24.0",
     "@opentelemetry/sdk-node": "^0.53.0",
