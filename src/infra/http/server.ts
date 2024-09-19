@@ -78,11 +78,6 @@ app.setErrorHandler((error, req, reply) => {
   return reply.status(500).send({ message: 'Internal app error.' })
 })
 
-process.on('uncaughtException', async function (err) {
-  // captureException(err)
-  app.log.error('Uncaught exception: ', err)
-})
-
 app.listen({ port: env.PORT, host: '0.0.0.0' }, (err, address) => {
   if (err) {
     app.log.error(err)
