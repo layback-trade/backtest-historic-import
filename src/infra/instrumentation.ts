@@ -17,13 +17,9 @@ const sdk = new NodeSDK({
     [ATTR_SERVICE_NAME]: 'historic-data-import',
     [ATTR_SERVICE_VERSION]: '1.0.0',
   }),
-  traceExporter: new OTLPTraceExporter({
-    url: `${process.env.OTLP_ENDPOINT}/v1/traces`,
-  }),
+  traceExporter: new OTLPTraceExporter(),
   metricReader: new metrics.PeriodicExportingMetricReader({
-    exporter: new OTLPMetricExporter({
-      url: `${process.env.OTLP_ENDPOINT}/v1/metrics`,
-    }),
+    exporter: new OTLPMetricExporter(),
   }),
   instrumentations: [getNodeAutoInstrumentations()],
 })
