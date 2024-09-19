@@ -85,3 +85,7 @@ app.listen({ port: env.PORT, host: '0.0.0.0' }, (err, address) => {
   }
   app.log.info(`app listening at ${address}`)
 })
+
+process.on('uncaughtException', async function (err) {
+  app.log.error('Uncaught exception: ', err)
+})

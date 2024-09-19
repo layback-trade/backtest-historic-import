@@ -28,8 +28,8 @@ const sdk = new NodeSDK({
   instrumentations: [getNodeAutoInstrumentations()],
 })
 
-process.on('uncaughtException', async function (err) {
-  console.error('Uncaught exception: ', err)
+process.on('beforeExit', async function (err) {
+  console.error(err)
   await sdk.shutdown()
 })
 
