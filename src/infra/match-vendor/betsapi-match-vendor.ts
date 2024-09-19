@@ -3,6 +3,7 @@ import axios from 'axios'
 import { differenceInMinutes, isBefore, isFuture, subMinutes } from 'date-fns'
 import { MatchVendor, MatchVendorResponse, MatchVendorStatistic } from '.'
 import { env } from '../env'
+import { app } from '../http/server'
 
 const statisticsMap = new Map([
   ['possession', 'POSSESSION'],
@@ -315,7 +316,9 @@ export class BetsAPIMatchVendor implements MatchVendor {
       )
 
     if (isFuture(mostLikelyFirstHalfStart)) {
-      console.log({ mostLikelyFirstHalfStart })
+      app.log.warn(
+        `First half start is in the future: ${mostLikelyFirstHalfStart}`,
+      )
     }
     if (
       differenceInMinutes(periods.firstHalfEnd, periods.secondHalfStart) <= 2 &&

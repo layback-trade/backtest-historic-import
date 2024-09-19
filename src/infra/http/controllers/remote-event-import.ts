@@ -3,6 +3,7 @@ import { StartRemoteEventImportUseCase } from '@/domain/import/application/use-c
 import { PrismaEventImportsRepository } from '@/infra/repositories/prisma/prisma-event-imports-repository'
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
+import { app } from '../server'
 
 const remoteEventImportBodySchema = z.object({
   betfairSSOId: z.string(),
@@ -30,7 +31,7 @@ export class RemoteEventImportController {
         },
       }) // or reply with the stream
     } catch (error) {
-      console.log(error)
+      app.log.error(error)
       reply.status(400).send({ error })
     }
   }

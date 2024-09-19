@@ -5,6 +5,7 @@ import {
   inMemoryMatchesRepository,
   inMemoryTeamsRepository,
 } from '@/infra/http/make-instances'
+import { app } from '@/infra/http/server'
 import { PgCopyOdds } from '@/infra/repositories/pg/pg-markets-repository'
 import { PrismaMatchMapper } from '@/infra/repositories/prisma/mappers/prisma-match-mapper'
 import {
@@ -53,7 +54,7 @@ export class DataSavingHandler implements WorkerHandler<null> {
     const statistics: PrismaStatistic[] = []
     const matches: Event[] = []
 
-    inMemoryMarketsRepository.markets.forEach((market, id) => {
+    inMemoryMarketsRepository.markets.forEach((market) => {
       const match = inMemoryMatchesRepository.matches.get(
         String(market.eventId),
       )
@@ -85,7 +86,7 @@ export class DataSavingHandler implements WorkerHandler<null> {
         const home = market.selections[0]
         const away = market.selections[1]
         if (!home || !away) {
-          console.log('Sem home ou away', { market })
+          app.log.warn('Match without home or away teams', { market })
           return null
         }
 
@@ -106,7 +107,7 @@ export class DataSavingHandler implements WorkerHandler<null> {
 
       if (!inMemoryMatch.secondHalfStart || !inMemoryMatch.firstHalfEnd) {
         // '33238130', '33239449'
-        console.log('Sem first half end ou second half start', {
+        app.log.warn('Match without first half end or second half start', {
           match: inMemoryMatch,
         })
         return null

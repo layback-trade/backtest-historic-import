@@ -14,7 +14,7 @@ import {
   inMemoryMarketsRepository,
   inMemoryTeamsRepository,
 } from '@/infra/http/make-instances'
-import { DiscordAlert } from '@/infra/logging/discord'
+import { app } from '@/infra/http/server'
 import { Job } from 'bullmq'
 import { WorkerHandler } from '../interfaces/worker-handler'
 
@@ -108,7 +108,7 @@ export class MarketResourcesHandler implements WorkerHandler<FullMarketFile[]> {
             })
           } catch (err) {
             if (err instanceof MarketAlreadyClosedError) {
-              DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+              app.log.error(`Market ID: ${marketId}; ${err.message}`)
               break
             }
           }
@@ -154,18 +154,18 @@ export class MarketResourcesHandler implements WorkerHandler<FullMarketFile[]> {
           }
         } catch (err) {
           if (err instanceof MarketWithoutOddsError) {
-            DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+            app.log.error(`Market ID: ${marketId}; ${err.message}`)
             inMemoryMarketsRepository.markets.delete(marketId)
             break
           }
           if (err instanceof MarketAlreadyClosedError) {
-            DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+            app.log.error(`Market ID: ${marketId}; ${err.message}`)
           }
           if (err instanceof MarketStatusAlreadyDefinedError) {
-            DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+            app.log.error(`Market ID: ${marketId}; ${err.message}`)
           }
           if (err instanceof MarketWithoutInPlayDateError) {
-            DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+            app.log.error(`Market ID: ${marketId}; ${err.message}`)
             inMemoryMarketsRepository.markets.delete(marketId)
             break
           }
@@ -185,10 +185,10 @@ export class MarketResourcesHandler implements WorkerHandler<FullMarketFile[]> {
             })
           } catch (err) {
             if (err instanceof MarketAlreadyClosedError) {
-              DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+              app.log.error(`Market ID: ${marketId}; ${err.message}`)
             }
             // else if (err instanceof Error) {
-            //   DiscordAlert.error(`ID do mercado: ${marketId}; ${err.message}`)
+            //   app.log.error(`Market ID: ${marketId}; ${err.message}`)
             // }
           }
         }

@@ -12,6 +12,7 @@ const _env = z.object({
   DATABASE_URL: z.string(),
   PORT: z.coerce.number().default(8888),
   BASE_FILES_PATH: z.string(),
+  OTLP_ENDPOINT: z.string().default('http://localhost:4318'),
 })
 
 export const env = _env.parse(process.env)

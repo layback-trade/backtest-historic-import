@@ -6,13 +6,13 @@ import { RegisterNewMatchStatisticUseCase } from '@/domain/match/application/use
 import { StartMatchSecondHalfUseCase } from '@/domain/match/application/use-cases/start-match-second-half'
 import { IntervalTooShortError } from '@/domain/match/enterprise/errors/Interval-too-short-error'
 import { FirstHalfTooLongError } from '@/domain/match/enterprise/errors/first-half-too-long-error'
-import { DiscordAlert } from '@/infra/logging/discord'
 import { MatchVendor } from '@/infra/match-vendor'
 
 import {
   inMemoryCompetitionsRepository,
   inMemoryMatchesRepository,
 } from '@/infra/http/make-instances'
+import { app } from '@/infra/http/server'
 import { Job } from 'bullmq'
 import { isAfter, isBefore } from 'date-fns'
 import { WorkerHandler } from '../interfaces/worker-handler'
@@ -105,17 +105,13 @@ export class MatchResourcesHandler
         if (err instanceof FirstHalfTooLongError) {
           // score_h da betsapi veio referente ao fim do intervalo e não fim do primeiro tempo
           // Ou não veio score_h
-          await DiscordAlert.error(
-            `ID da partida: ${match.id} -> ${err.message}`,
-          )
+          app.log.error(`Match ID: ${match.id} -> ${err.message}`)
         } else if (err) {
           if (err instanceof IntervalTooShortError) {
-            await DiscordAlert.error(
-              `ID da partida: ${match.id} -> ${err.message}`,
-            )
+            app.log.error(`Match ID: ${match.id} -> ${err.message}`)
           }
         }
-        console.error(err)
+        app.log.error(err)
       }
       for (const statistic of match.statistics.filter((stat) =>
         isAfter(stat.timestamp, match.firstHalfEnd),

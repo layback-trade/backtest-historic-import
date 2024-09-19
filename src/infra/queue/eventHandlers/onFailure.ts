@@ -1,5 +1,7 @@
 // import { captureException } from '@sentry/node'
 
+import { app } from '@/infra/http/server'
+
 interface OnQueueFailureParams {
   // queue: string
   err: Error
@@ -14,5 +16,5 @@ export async function onQueueFailure({
   // parentId,
 }: OnQueueFailureParams) {
   // captureException(err)
-  console.error(err, failedReason)
+  app.log.error(err, failedReason)
 }

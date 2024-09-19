@@ -1,4 +1,4 @@
-import { publisher } from '@/infra/http/server'
+import { app, publisher } from '@/infra/http/server'
 import { FullMarketFile } from '@/infra/queue/workerHandlers/market-resources-handler'
 import { BZ2Reader } from '@/infra/reader/bz2-reader'
 import { EventImport } from '../../enterprise/entities/event-import'
@@ -42,19 +42,25 @@ export class StartRemoteEventImportUseCase {
         const marketDataJSON =
           await BZ2Reader.convertToString<FullMarketFile>(stream)
 
-        await publisher.publishAll(marketDataJSON)
+        await publisher.publishAll(
+          marketDataJSON,
+          fullPeriod.startDate,
+          fullPeriod.endDate,
+        )
         next()
       })
 
       stream.on('finish', async () => {
         resolve(eventImport)
-        console.log('Finish', dataReceivedCount)
         if (dataReceivedCount === 0) {
+          app.log.error("Source didn't return any data")
           await this.eventImportsRepository.delete(eventImport.id)
+        } else {
+          app.log.info('Source provided data')
         }
       })
       stream.on('error', (err) => {
-        console.log(err)
+        app.log.error(err)
         reject(err)
       })
     })

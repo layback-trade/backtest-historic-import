@@ -1,4 +1,4 @@
-import { publisher } from '@/infra/http/server'
+import { app, publisher } from '@/infra/http/server'
 import { FullMarketFile } from '@/infra/queue/workerHandlers/market-resources-handler'
 import { BZ2Reader } from '@/infra/reader/bz2-reader'
 import { addDays } from 'date-fns'
@@ -46,13 +46,15 @@ export class StartRemoteImportUseCase {
 
       stream.on('finish', async () => {
         resolve(importEntity)
-        console.log('Finish', dataReceivedCount)
         if (dataReceivedCount === 0) {
+          app.log.error("Source didn't return any data")
           await this.importsRepository.delete(importEntity.id)
+        } else {
+          app.log.info('Source provided data')
         }
       })
       stream.on('error', (err) => {
-        console.log(err)
+        app.log.error(err)
         reject(err)
       })
     })

@@ -1,5 +1,6 @@
 import { format } from 'fast-csv'
 import fs from 'fs'
+import { app } from '../http/server'
 
 interface ConvertToCSVParams {
   data: Array<unknown>
@@ -17,7 +18,7 @@ export class CSVConverter {
       })
 
       writableStream.on('error', (err) => {
-        console.error('Error writing CSV file:', err)
+        app.log.error('Error writing CSV file:', err)
         reject(err)
       })
 

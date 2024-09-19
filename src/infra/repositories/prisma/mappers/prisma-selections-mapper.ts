@@ -1,3 +1,4 @@
+import { app } from '@/infra/http/server'
 import { SelectionOdd as PrismaOdd } from '@prisma/client'
 
 interface PrismaSelectionMapperInput {
@@ -25,7 +26,7 @@ export class PrismaSelectionMapper {
       .pop()
 
     if (!lastOddBeforeInPlay) {
-      console.log('Sem odd antes do in play', { selection, marketId })
+      app.log.warn('No odd before in play', { selection, marketId })
     }
 
     return {

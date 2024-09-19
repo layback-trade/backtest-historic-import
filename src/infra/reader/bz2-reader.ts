@@ -1,5 +1,6 @@
 import { Readable } from 'stream'
 import bz2 from 'unbzip2-stream'
+import { app } from '../http/server'
 
 export class BZ2Reader {
   static async convertToString<FileContentType>(
@@ -20,7 +21,7 @@ export class BZ2Reader {
           resolve(fileDataJSON)
         })
         .on('error', (err) => {
-          console.error(err)
+          app.log.error(err)
           reject(err)
         })
     })

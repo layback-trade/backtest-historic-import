@@ -2,6 +2,7 @@ import { Queue as BullQueue, Worker as BullWorker, Processor } from 'bullmq'
 
 import { env } from '../env'
 
+import { app } from '../http/server'
 import { BetsAPIMatchVendor } from '../match-vendor/betsapi-match-vendor'
 import { OnCompleteHandler } from './eventHandlers/onCompleteHandler'
 import { queueRedis } from './redis'
@@ -56,7 +57,7 @@ export class QueueManager {
       const queue = new BullQueue(name, {
         connection: queueRedis,
       }).on('error', (err) => {
-        console.error(err)
+        app.log.error(err)
       })
 
       for (
@@ -69,7 +70,7 @@ export class QueueManager {
           lockDuration: 1000 * 1200, // 20 minutes
         })
           .on('error', (err) => {
-            console.error(err)
+            app.log.error(err)
           })
           .on('completed', (job) => {
             if (name === env.MATCH_RESOURCES_QUEUE) {

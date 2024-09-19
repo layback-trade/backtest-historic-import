@@ -3,6 +3,7 @@ import { StartRemoteImportUseCase } from '@/domain/import/application/use-cases/
 import { PrismaImportsRepository } from '@/infra/repositories/prisma/prisma-imports-repository'
 import { FastifyReply, FastifyRequest } from 'fastify'
 import { z } from 'zod'
+import { app } from '../server'
 
 const remoteImportBodySchema = z.object({
   betfairSSOId: z.string(),
@@ -32,7 +33,7 @@ export class RemoteImportController {
         },
       }) // or reply with the stream
     } catch (error) {
-      console.log(error)
+      app.log.error(error)
       reply.status(400).send({ error })
     }
   }

@@ -1,4 +1,5 @@
 import { Optional } from '@/core/type-utils'
+import { app } from '@/infra/http/server'
 import { addMinutes, isAfter, isBefore } from 'date-fns'
 import { Entity } from '../../../../core/entity'
 import { MarketAlreadyClosedError } from '../errors/market-already-closed-error'
@@ -187,8 +188,8 @@ export class Market extends Entity<MarketProps> {
       this.props.type === 'MATCH_ODDS' &&
       addMinutes(this.props.inPlayDate, 90) > time
     ) {
-      console.log(
-        'Mercado não pode ser fechado antes de 90 minutos',
+      app.log.warn(
+        'Market cannot be closed before 90 minutes',
         addMinutes(this.props.inPlayDate, 90),
         time,
       )
@@ -199,8 +200,8 @@ export class Market extends Entity<MarketProps> {
       this.props.type === 'CORRECT_SCORE' &&
       addMinutes(this.props.inPlayDate, 90) > time
     ) {
-      console.log(
-        'Mercado não pode ser fechado antes de 90 minutos',
+      app.log.warn(
+        'Market cannot be closed before 90 minutes',
         addMinutes(this.props.inPlayDate, 90),
         time,
       )

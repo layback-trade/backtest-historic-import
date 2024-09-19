@@ -1,3 +1,4 @@
+import { app } from '@/infra/http/server'
 import { differenceInSeconds, isAfter } from 'date-fns'
 
 enum GamePeriod {
@@ -47,11 +48,11 @@ export class GameTime {
 
     if (this._minute > 120) {
       // throw new Error('Invalid minute.')
-      console.error('Statistic after second half')
+      app.log.error('Statistic after second half')
     }
     if (this.minute > 200) {
       // throw new Error('Invalid minute.')
-      console.error('Invalid minute')
+      app.log.error('Invalid minute')
     }
   }
 

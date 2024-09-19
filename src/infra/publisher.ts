@@ -8,8 +8,7 @@ import {
   inMemoryEventsRepository,
   inMemoryMarketsRepository,
 } from './http/make-instances'
-import { queues } from './http/server'
-import { DiscordAlert } from './logging/discord'
+import { app, queues } from './http/server'
 import { FullMarketFile } from './queue/workerHandlers/market-resources-handler'
 
 export class Publisher {
@@ -80,14 +79,14 @@ export class Publisher {
         })
       } else {
         // WARN -> Market without data
-        DiscordAlert.error('Market without data')
+        app.log.error('Market without data')
         return
       }
     } catch (err) {
       if (err instanceof ConflictError) {
-        DiscordAlert.error(`
-        ID do evento: ${eventId};
-        ID do mercado: ${marketId};
+        app.log.error(`
+        Event ID: ${eventId};
+        Market ID: ${marketId};
         ${err.message}
         `)
         // return { market: null }

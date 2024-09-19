@@ -4,6 +4,7 @@ import { ZodError } from 'zod'
 import { env } from '../env'
 import './make-instances'
 
+import { trace } from '@opentelemetry/api'
 import { Publisher } from '../publisher'
 import { QueueManager } from '../queue/queue-manager'
 import { HealthController } from './controllers/health'
@@ -11,7 +12,43 @@ import { ListImportsController } from './controllers/list-imports'
 import { RemoteEventImportController } from './controllers/remote-event-import'
 import { RemoteImportController } from './controllers/remote-import'
 
-const server = Fastify({})
+export const app = Fastify({
+  logger: {
+    transport: {
+      targets: [
+        {
+          target: 'pino-pretty',
+          level: 'info',
+          options: {
+            colorize: true,
+          },
+        },
+        {
+          target: 'pino-opentelemetry-transport',
+          options: {
+            resourceAttributes: {
+              serviceName: 'historic-data-import',
+            },
+          },
+        },
+      ],
+    },
+    formatters: {
+      log: (log) => {
+        const currentSession = trace.getActiveSpan()
+        if (currentSession) {
+          const { traceId, spanId, traceFlags } = currentSession.spanContext()
+
+          log.traceId = traceId
+          log.spanId = spanId
+          log.traceFlags = traceFlags
+        }
+
+        return log
+      },
+    },
+  },
+})
 
 export const queues = new QueueManager()
 export const publisher = new Publisher()
@@ -20,36 +57,36 @@ const remoteImportController = new RemoteImportController()
 const remoteEventImportController = new RemoteEventImportController()
 const listImportsController = new ListImportsController()
 const healthController = new HealthController()
-server.register(cors, {
+app.register(cors, {
   origin: '*',
 })
 
-server.post('/import', remoteImportController.handle)
-server.post('/event-import', remoteEventImportController.handle)
-server.get('/imports', listImportsController.handle)
-server.get('/health', healthController.handle)
+app.post('/import', remoteImportController.handle)
+app.post('/event-import', remoteEventImportController.handle)
+app.get('/imports', listImportsController.handle)
+app.get('/health', healthController.handle)
 
-server.setErrorHandler((error, _, reply) => {
+app.setErrorHandler((error, req, reply) => {
   if (error instanceof ZodError) {
     return reply.status(400).send({
       message: 'Validation Error',
       issues: error.format(),
     })
   }
-  console.error(error)
+  req.log.error(error)
 
-  return reply.status(500).send({ message: 'Internal server error.' })
+  return reply.status(500).send({ message: 'Internal app error.' })
 })
 
 process.on('uncaughtException', async function (err) {
   // captureException(err)
-  console.error('Exceção inesperada: ', err)
+  app.log.error('Uncaught exception: ', err)
 })
 
-server.listen({ port: env.PORT, host: '0.0.0.0' }, (err, address) => {
+app.listen({ port: env.PORT, host: '0.0.0.0' }, (err, address) => {
   if (err) {
-    server.log.error(err)
+    app.log.error(err)
     process.exit(1)
   }
-  server.log.info(`Server listening at ${address}`)
+  app.log.info(`app listening at ${address}`)
 })
