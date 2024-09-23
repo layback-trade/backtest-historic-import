@@ -308,6 +308,7 @@ export class OddsSuspender {
     private market: InMemoryPersistenceMarket,
     goals: Statistic[],
     private prismaOdds: PrismaOdd[],
+    private periods: Periods,
   ) {
     this.goals = goals.filter((goal) => goal.type === StatisticTypeEnum.GOAL)
   }
@@ -320,6 +321,7 @@ export class OddsSuspender {
         finishedAt: this.market.statusHistory
           .slice(this.market.statusHistory.indexOf(status) + 1)
           .find((status) => status.name !== 'SUSPENDED')!.timestamp,
+        minute: new GameTime(status.timestamp, this.periods).minute,  
       }))
 
     const suspendedTimesWithGoals = this.goals
@@ -327,6 +329,7 @@ export class OddsSuspender {
       .map((goal) => ({
         startedAt: goal.createdAt,
         finishedAt: addMinutes(goal.createdAt, 1),
+        minute: goal.gameTime,
       }))
       .concat(marketSuspendedTimes)
 
@@ -346,8 +349,8 @@ export class OddsSuspender {
       if (
         suspendedTimesWithGoals.some(
           (suspendedTime) =>
-            suspendedTime.startedAt <= odd.createdAt! &&
-            odd.createdAt! <= suspendedTime.finishedAt,
+            (suspendedTime.startedAt <= odd.createdAt! &&
+            odd.createdAt! <= suspendedTime.finishedAt) || suspendedTime.minute === odd.gameTime,
         ) ||
         (previousOdd?.marketStatus === 'SUSPENDED' && odd?.isArtificial)
       ) {

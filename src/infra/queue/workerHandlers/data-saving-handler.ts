@@ -162,6 +162,11 @@ export class DataSavingHandler implements WorkerHandler<null> {
             statistic.type === 'GOAL',
         ),
         oddsWithPersistedFormat,
+        {
+          firstHalfStart: match.firstHalfStart!,
+          firstHalfEnd: match.firstHalfEnd!,
+          secondHalfStart: match.secondHalfStart!,
+        },
       )
 
       const oddsWithSuspensions = oddsSuspender.invalidateAll()

@@ -64,7 +64,7 @@ app.register(cors, {
 app.post('/import', remoteImportController.handle)
 app.post('/event-import', remoteEventImportController.handle)
 app.get('/imports', listImportsController.handle)
-app.get('/health', healthController.handle)
+app.get('/health', { logLevel: 'silent' }, healthController.handle)
 
 app.setErrorHandler((error, req, reply) => {
   if (error instanceof ZodError) {
