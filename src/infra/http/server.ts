@@ -63,7 +63,7 @@ app.register(cors, {
 
 app.post('/import', remoteImportController.handle)
 app.post('/event-import', remoteEventImportController.handle)
-app.get('/imports', listImportsController.handle)
+app.get('/imports', { logLevel: 'silent' }, listImportsController.handle)
 app.get('/health', { logLevel: 'silent' }, healthController.handle)
 
 app.setErrorHandler((error, req, reply) => {

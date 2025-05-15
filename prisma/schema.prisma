@@ -132,7 +132,7 @@ model Statistic {
   type              String // StatisticType
   gameTime          Int
   gameTimeStatus    String
-  gameTimePeriod    Int?
+  gameTimePeriod    Float?
   status            String?
   teamSide          String // home or away 
   value             Int

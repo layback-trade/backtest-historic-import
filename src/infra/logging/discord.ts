@@ -1,7 +1,7 @@
 import axios from 'axios'
 
 const url =
-  'https://discord.com/api/webhooks/1146520953401114625/4KL0u8n42YyahwMslgPLpgGucK4YGk31sewUTOOmm6R-rZrFvmB-zPq_t180fLRX6Vpa'
+  'https://discord.com/api/webhooks/1371915301720952922/QtKVtXUJwk-J0u-rFe7q4rfyQbAZ7tXDApHroirN3rSmWeMsNNclPJwmidSzgs6TSCuz'
 export class DiscordAlert {
   static async warn(message: string): Promise<void> {
     const username = 'Warning'
@@ -23,11 +23,11 @@ export class DiscordAlert {
     const avatarUrl =
       'https://firebasestorage.googleapis.com/v0/b/layback-43391.appspot.com/o/Images%2Ferror.png?alt=media'
     try {
-      // axios.post(url, {
-      //   content: message,
-      //   username,
-      //   avatar_url: avatarUrl,
-      // })
+      axios.post(url, {
+        content: message,
+        username,
+        avatar_url: avatarUrl,
+      })
       console.log('Erro enviado: ', message)
     } catch (error: unknown) {
       console.log(error)

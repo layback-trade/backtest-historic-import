@@ -3,6 +3,7 @@ import { Queue as BullQueue, Worker as BullWorker, Processor } from 'bullmq'
 import { env } from '../env'
 
 import { app } from '../http/server'
+import { DiscordAlert } from '../logging/discord'
 import { BetsAPIMatchVendor } from '../match-vendor/betsapi-match-vendor'
 import { OnCompleteHandler } from './eventHandlers/onCompleteHandler'
 import { queueRedis } from './redis'
@@ -58,6 +59,7 @@ export class QueueManager {
         connection: queueRedis,
       }).on('error', (err) => {
         app.log.error(err)
+        DiscordAlert.error(`Queue error in ${name}: ${err.message}`)
       })
 
       for (
