@@ -58,8 +58,12 @@ const remoteEventImportController = new RemoteEventImportController()
 const listImportsController = new ListImportsController()
 const healthController = new HealthController()
 app.register(cors, {
-  origin: '*',
+  origin: 'https://business.layback.me',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
+  preflight: true,
+  preflightContinue: false,
 })
 
 app.post('/import', remoteImportController.handle)
