@@ -9,6 +9,7 @@ import {
   inMemoryMarketsRepository,
 } from './http/make-instances'
 import { app, queues } from './http/server'
+import { DiscordAlert } from './logging/discord'
 import { FullMarketFile } from './queue/workerHandlers/market-resources-handler'
 
 export class Publisher {
@@ -53,6 +54,8 @@ export class Publisher {
       const eventAlreadyExists =
         await inMemoryEventsRepository.findById(eventId)
 
+      // Send notification when import starts
+      await DiscordAlert.info('🚀 Data import process started')
       if (!eventAlreadyExists) {
         await this.createEventUseCase.execute({
           id: eventId,

@@ -34,7 +34,7 @@ export class DataSavingHandler implements WorkerHandler<null> {
   async process() {
     try {
       // Send notification when import starts
-      await DiscordAlert.info('🚀 Data import process started')
+      await DiscordAlert.info('🚀 Saving data...')
 
       // *** Formatting ***
 
@@ -396,7 +396,7 @@ export class DataSavingHandler implements WorkerHandler<null> {
 
       // Send notification when import completes successfully
       await DiscordAlert.info(
-        `✅ Data import completed successfully! Added ${matchesAdded} matches with ${odds.length} odds.`,
+        `✅ Data import completed successfully! Added ${matchesAdded} matches, ${marketsWithMatches.length} markets, ${selections.length} selections, ${statistics.length} statistics and ${odds.length} odds.`,
       )
 
       return { matchesAdded }

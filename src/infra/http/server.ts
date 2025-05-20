@@ -59,6 +59,7 @@ const listImportsController = new ListImportsController()
 const healthController = new HealthController()
 app.register(cors, {
   origin: '*',
+  credentials: true,
 })
 
 app.post('/import', remoteImportController.handle)
