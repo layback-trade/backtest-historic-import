@@ -28,12 +28,16 @@ export class Publisher {
 
   public importId: string = ''
   public importType: 'event' | 'period' = 'period'
+  public startDate: Date = new Date()
+  public endDate: Date = new Date()
 
   async publishAll(
     marketData: FullMarketFile[],
     startDate: Date,
     endDate: Date,
   ) {
+    this.startDate = startDate
+    this.endDate = endDate
     const marketId = marketData[0].mc[0].id
 
     if (!marketData[marketData.length - 1].mc[0].marketDefinition) {

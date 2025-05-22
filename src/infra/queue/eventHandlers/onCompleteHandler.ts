@@ -74,6 +74,13 @@ export class OnCompleteHandler {
       })
 
       console.time('Atualização de histórico dos times')
+      const startDate = new Date(publisher.startDate)
+      startDate.setDate(startDate.getDate() - 1) // Subtract one day from start date
+      const endDate = publisher.endDate
+
+      console.log(
+        `UPDATING LAST TEAM MATCHES FROM ${startDate.toISOString()} TO ${endDate.toISOString()}`,
+      )
       await pool.query(`
       BEGIN;
         insert into LastTeamMatches(id, eventIdLast, id_mesmo_mando, id_mesma_competicao, qt_jogo_passado_casa, qt_jogo_passado_fora)
@@ -84,7 +91,7 @@ export class OnCompleteHandler {
           0 as qt_jogo_passado_fora
         from events
         inner join events as lastEvents on (lastEvents."startDate" < events."startDate" and (lastEvents."homeTeamId" in (events."homeTeamId", events."awayTeamId") or lastEvents."awayTeamId" in (events."homeTeamId", events."awayTeamId")))
-        where events."startDate" between '2024-05-20T00:00:00Z' and '2024-05-28T23:59:59Z'
+        where events."startDate" between '${startDate.toISOString()}' and '${endDate.toISOString()}'
           and not exists (select 1 from LastTeamMatches as L where L.id = events."id" and L.eventIdLast = lastEvents."id");
 
         update LastTeamMatches
@@ -92,16 +99,16 @@ export class OnCompleteHandler {
         from Lateral(SELECT LastTeamMatches.id, LastTeamMatches.eventIdLast, lastEvents."startDate", ROW_NUMBER() OVER (PARTITION BY LastTeamMatches.id ORDER BY lastEvents."startDate" desc) as seq
         FROM LastTeamMatches
         inner join events as lastEvents on (LastTeamMatches.eventIdLast = lastEvents."id")
-        inner join events on (LastTeamMatches."id" = events."id" and events."homeTeamId" in (lastEvents."homeTeamId", lastEvents."awayTeamId"))) as x -- and events."startDate" between '2024-05-20T00:00:00Z' and '2024-05-28T23:59:59Z'
-        where LastTeamMatches.id = x.id and LastTeamMatches.eventIdLast = x.eventIdLast and LastTeamMatches.qt_jogo_passado_casa = 0;
+        inner join events on (LastTeamMatches."id" = events."id" and events."startDate" between '${startDate.toISOString()}' and '${endDate.toISOString()}' and events."homeTeamId" in (lastEvents."homeTeamId", lastEvents."awayTeamId"))) as x
+        where LastTeamMatches.id = x.id and LastTeamMatches.eventIdLast = x.eventIdLast;
 
         update LastTeamMatches
         set qt_jogo_passado_fora = x.seq
         from Lateral(SELECT LastTeamMatches.id, LastTeamMatches.eventIdLast, lastEvents."startDate", ROW_NUMBER() OVER (PARTITION BY LastTeamMatches.id ORDER BY lastEvents."startDate" desc) as seq
         FROM LastTeamMatches
         inner join events as lastEvents on (LastTeamMatches.eventIdLast = lastEvents."id")
-        inner join events on (LastTeamMatches."id" = events."id" and events."awayTeamId" in (lastEvents."homeTeamId", lastEvents."awayTeamId"))) as x
-        where LastTeamMatches.id = x.id and LastTeamMatches.eventIdLast = x.eventIdLast and LastTeamMatches.qt_jogo_passado_fora = 0;
+        inner join events on (LastTeamMatches."id" = events."id" and events."startDate" between '${startDate.toISOString()}' and '${endDate.toISOString()}' and events."awayTeamId" in (lastEvents."homeTeamId", lastEvents."awayTeamId"))) as x
+        where LastTeamMatches.id = x.id and LastTeamMatches.eventIdLast = x.eventIdLast;
       COMMIT;
       `)
       console.timeEnd('Atualização de histórico dos times')
